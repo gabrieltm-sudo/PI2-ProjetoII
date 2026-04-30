@@ -93,30 +93,30 @@ End: 8 bits;
 // ------------------------------ PROTÓTIPOS -------------------------------
 
 // MENU / CONTROLE DO SISTEMA
+void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc,
+         int *memDados, estatInstrucoes *estatInst, regEstado *estado);
+void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc,
+          int *memDados, estatInstrucoes *estatInst, regEstado *estado);
 void imprimeEstatistica(estatInstrucoes estatInst);
 void salvaASM(instrucao *memoria, int linhas);
 void salvaDAT(int *memDados);
-void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, int *memDados, estatInstrucoes *estatInst);
-void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, int *memDados, estatInstrucoes *estatInst);
 
-// MEMÓRIA
+// MEMÓRIA DE INSTRUÇÕES
 int contaLinhas(char *arq);
 void lerMem(char *arq, instrucao **memoria, int linhas);
 void imprimeMemorias(instrucao *memoria, int *memDados);
 void imprimeInstrucao(instrucao *memoria, int pc);
-void decodifica(instrucao *instrucao);
 
 // PROGRAM COUNTER (PC) / BUSCA
+void buscaInstrucao(instrucao *memoria, int *pc, regEstado *estado);
 void programCounter(int *pc, sinaisUC *sinais, instrucao *instrucao, int zero);
 
-
 // DECODIFICAÇÃO
-void decodificaInst(instrucao *instrucao);
-
+void decodificaInstrucao(regEstado *estado, int *bReg);   // multiciclo
+void decodificaInst(instrucao *instrucao);                // utilitário (ASM)
 
 // UNIDADE DE CONTROLE (UC)
-void unidadeControle(instrucao *instrucao, sinaisUC *sinais);
-
+void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais);
 
 // BANCO DE REGISTRADORES (BREG)
 int *inicializaBReg();
@@ -124,11 +124,9 @@ void lerRegistradores(int *reg, int8_t rs, int8_t rt, int8_t *valRs, int8_t *val
 void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
-
 // EXECUÇÃO
 int executaInstrucao(instrucao *instrucao, sinaisUC *sinais, int *bReg, int *memDados);
 int8_t extensorBit(int8_t imm);
-
 
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
 int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
@@ -143,6 +141,6 @@ int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
 void salvaEstado(historico *hist, int pc, int *memDados, int *bReg, estatInstrucoes *estatInst);
 void voltaInstrucao(historico *hist, int *pc, int *memDados, int *bReg, estatInstrucoes *estatInst);
 
-//----------------------------------------------------------------------
+// -------------------------------------------------------------------------
 
 #endif

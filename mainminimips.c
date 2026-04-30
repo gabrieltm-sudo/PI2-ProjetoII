@@ -5,6 +5,8 @@
 #include "minimips.h"
 
 int main(){
+    regEstado estado;   // novo registrador de estado para multiciclo
+
     int pc = 0, opcao, linhas = 0;
 
     estatInstrucoes estatInst = {0};
@@ -111,13 +113,13 @@ int main(){
 
             case 8:
                 //Executar programa (run)
-                run(memoria, bReg, &sinais, &pc, memDados, &estatInst);
+                run(memoria, bReg, &sinais, &pc, memDados, &estatInst, &estado);
                 break;
 
             case 9:
                 //Executa instrução (step)
                 salvaEstado(&hist, pc, memDados, bReg, &estatInst);
-                step(memoria, bReg, &sinais, &pc, memDados, &estatInst);
+                step(memoria, bReg, &sinais, &pc, memDados, &estatInst, &estado);
                 break;
 
             case 10:
