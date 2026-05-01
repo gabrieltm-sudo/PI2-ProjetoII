@@ -1,0 +1,137 @@
+INSTRUCOES:
+OPCODE / FUNCT
+[4] / [3]
+------------------------
+0000/000 -> ADD -> 0/0
+0000/010 -> SUB -> 0/2
+0000/100 -> AND -> 0/4
+0000/101 -> OR  -> 0/5
+0100 	 -> AADi-> 4
+1011	 -> LW  -> 11
+1111	 -> SW  -> 15
+1000 	 -> BEQ	-> 8 /110
+0010	 -> J	-> 2
+========================
+
+# carrega o valor 5 para o registrador $2
+Assembly MIPS: addi $2 $0 5
+0100 000 010 000101 => 4085
+addi $0  $2  5
+inst rs  rt  imm
+
+# carrega o valor 3 para o registrador $1
+Assembly MIPS: addi $1,$0,3
+0100 000 001 000011 => 4043
+addi  $0  $1  3
+inst  rs  rt  imm
+
+# soma o conteudo do registrador $2 e $1 e armazena no  $3
+Assembly MIPS: add  $3,$2,$1 
+0000 010 001 011 000 => 458
+add   $2  $1  $3 000
+inst  rs  rt  rd funct
+
+# carrega o valor 10 para o registrador $4
+Assembly MIPS: addi $4,$0,10
+0100  000 100 001010 => 410A
+addi  $0  $4  10
+inst  rs  rt  imm
+
+#grava o conteúdo do registrador $2 na posição 0 da memória
+Assembly MIPS: sw $2,0($0)
+1111 000 010 000000 => F080
+sw   $0  $2 0
+inst rs  rt imm
+
+#grava o conteúdo do registrador $2 na posição 0 da memória
+Assembly MIPS: sw $4,4($0)
+1111 000 100 000100 => F104
+sw   $0  $4  4
+inst rs  rt  imm
+
+
+#faz o load na posição 4 da memória para o registrador $1
+Assembly MIPS: lw $4,4($0)
+1011 000 001  000100 => B044
+lw   $0  $1   4
+inst rs  rt   imm
+
+#realiza o teste do registrador $0 com o $2 se sim, vai para PC=8+1
+Assembly MIPS: beq $0,$2,8
+1000 000 010 001000 => 8088
+beq  $0  $2  8
+inst rs  rt   imm
+
+#realiza o teste do registrador $0 com o $5 se sim, vai para PC=PC+1+1 //pula a próxima instrucao
+Assembly MIPS: beq $0,$5,1 
+1000 000 101 000001 => 8141
+beq  $0  $5  1
+inst rs  rt   imm
+
+#realiza o teste do registrador $3 com o $2 se sim, vai para PC=PC+10+1
+Assembly MIPS: beq $3,$2,10
+1000 011 010 001010 => 868A
+beq  $3  $2  10
+inst rs  rt  imm
+
+#realiza o jump incondicional para o addr PC=addr posicao 0 da memoria
+Assembly MIPS: Jump 0
+0010 00000 0000000 => 2000
+jump 0
+inst addr
+
+MONOCICLO
+====== assembly => operacao 		=> hexadecimal ===========
+addi $2 $0 5 	=> $2 = 0+5        	=> 4085
+addi S1 S0 3 	=> $1 = 0+3			=> 4043
+add  $3 $2 $1   => $3 = $2+$1		=> 0458
+addi $4 $0 10 	=> $4 = 0+10		=> 410a
+sw   $2 0($0)	=> M[$0+0]= $2		=> F080
+sw   $4 4($0)	=> M[$0+4]= $4		=> F104
+lw   $4 4($0)	=> $4 = M[$0+4]		=> B044
+beq  $0 $2 8	=> PC = 8+1			=> 8088
+beq  $0 $5 1 	=> PC = pc+1+1		=> 8141
+beq  $3 $2 10	=> PC = Pc+1+10		=> 868A
+jump 0			=> PC = 1			=> 2000
+
+
+
+#######################################################################################################
+MULTICICLO
+#######################################################################################################
+
+#grava o conteúdo do registrador $2 na posição 0 da memória
+Assembly MIPS: sw $2,14($0)
+1111 000 010 001110 => F08E
+sw   $0  $2 14
+inst rs  rt imm
+
+#grava o conteúdo do registrador $2 na posição 0 da memória
+Assembly MIPS: sw $4,15($0)
+1111 000 100 001111 => F08F
+sw   $0  $4  15
+inst rs  rt  imm
+
+
+#faz o load na posição 4 da memória para o registrador $1
+Assembly MIPS: lw $1,14($0)
+1011 000 001  001110 => B04E
+lw   $0  $1   14
+inst rs  rt   imm
+
+
+
+MULTICICLO
+====== assembly => operacao 		=> hexadecimal ===========
+addi $2,$0,5 	=> $2 = 0+5        	=> 4085
+addi $1,$0,3 	=> $1 = 0+3			=> 4043
+add  $3,$2,$1   => $3 = $2+$1		=> 0458
+addi $4,10($0) 	=> $4 = 0+10		=> 410a
+sw   $2,14($0)	=> M[$0+14]= $2		=> F08E
+sw   $4,15($0)	=> M[$0+15]= $4		=> F08F
+lw   $1,14($0)	=> $1 = M[$0+14]	=> B04E
+beq  $0 $2 8	=> PC = 8+1			=> 8088
+beq  $0 $5 1 	=> PC = pc+1+1		=> 8141
+beq  $0 $2 20	=> PC = Pc+1+20		=> 868A
+jump 0			=> PC = 0			=> 2000
+

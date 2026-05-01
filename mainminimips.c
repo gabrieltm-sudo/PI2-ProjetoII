@@ -5,7 +5,7 @@
 #include "minimips.h"
 
 int main(){
-    regEstado estado;   // novo registrador de estado para multiciclo
+    regEstado estado = {0};   // novo registrador de estado para multiciclo
 
     int pc = 0, opcao, linhas = 0;
 
@@ -19,7 +19,6 @@ int main(){
     hist.topo = 0;
 
     int *bReg = inicializaBReg();
-    int *memDados = inicializaMemDados();  //APAGAR MEMORIA DE DADOS
 
     while (1) {
         printf("\nMenu:\n\n");
@@ -67,8 +66,8 @@ int main(){
                 break;
 
             case 3:
-                // Imprimir memórias (tanto instruções quando dados)
-                imprimeMemorias(memoria, memDados);
+                // Imprimir memórias (tanto instruções quanto dados)
+                imprimeMemorias(memoria);
 
                 break;
 
@@ -88,7 +87,7 @@ int main(){
                             imprimeBancoRegistradores(bReg);
                             break;
                         case 2:
-                            imprimeMemorias(memoria,memDados);
+                            imprimeMemorias(memoria);
                             break;
                         case 3:
                             imprimeEstatistica(estatInst);
@@ -108,30 +107,30 @@ int main(){
 
             case 7:
                 // Salvar .dat
-                salvaDAT(memDados);
+                // salvaDAT(memDados);
                 break;
 
             case 8:
                 //Executar programa (run)
-                run(memoria, bReg, &sinais, &pc, memDados, &estatInst, &estado);
+                run(memoria, bReg, &sinais, &pc, &estatInst, &estado);
                 break;
 
             case 9:
                 //Executa instrução (step)
-                salvaEstado(&hist, pc, memDados, bReg, &estatInst);
-                step(memoria, bReg, &sinais, &pc, memDados, &estatInst, &estado);
+                salvaEstado(&hist, pc, bReg, &estatInst, memoria);
+                step(memoria, bReg, &sinais, &pc, &estatInst, &estado);
                 break;
 
             case 10:
                 //Voltar instrução (back)
-                voltaInstrucao(&hist, &pc, memDados, bReg, &estatInst);
+                voltaInstrucao(&hist, &pc, bReg, &estatInst);
                 break;
 
             case 0:
                 //Sair
                 free(bReg);
                 free(memoria);
-                free(memDados);
+                //free(memDados);
                 printf("\nSaindo do programa...\n");
                 return 0;
 

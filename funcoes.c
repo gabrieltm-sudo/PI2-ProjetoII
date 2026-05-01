@@ -8,7 +8,7 @@
 FILE *arquivo = NULL;
 FILE *arquivoMemDados = NULL;
 
-//---------------------------------------LETURA E INICIALIZAÇÃO------------------------------------------------
+//---------------------------------------LEITURA E INICIALIZAÇÃO------------------------------------------------
 
 int contaLinhas(char *arq){
     arquivo = fopen(arq, "r");
@@ -34,7 +34,7 @@ int contaLinhas(char *arq){
 void lerMemUnificada(char *arq, MemoriaUnificada *memUnificada, int linhas) {
     FILE *arquivo = fopen(arq, "r");
     if (arquivo == NULL) {
-        printf("\nErro ao abrir arquivo de instruções!\n");
+        printf("\nErro ao abrir arquivo .mem!\n");
         return;
     }
 
@@ -52,19 +52,10 @@ void lerMemUnificada(char *arq, MemoriaUnificada *memUnificada, int linhas) {
     printf("\nMemória Unificada: %d instruções carregadas.\n", i);
 }
 
-int *inicializaBReg(){
-    return calloc(8, sizeof(int));
-}
-
-//APAGAR INICIALIZA MEM DADOS
-//int *inicializaMemDados(){
-//    return calloc(256, sizeof(int));
-//}
-
 void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas) {
     FILE *arquivo = fopen(arq, "r");
     if (arquivo == NULL) {
-        printf("\nErro ao abrir arquivo de instruções!\n");
+        printf("\nErro ao abrir arquivo .mem!\n");
         return;
     }
 
@@ -79,6 +70,11 @@ void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas) {
     fclose(arquivo);
     printf("\nMemória Unificada: %d dados carregados.\n", i);
 }
+
+int *inicializaBReg(){
+    return calloc(8, sizeof(int));
+}
+
 
 void escreveMemDados(int *memDados, int endereco, int8_t valor) {
     if (endereco >= 0 && endereco < 256) {
@@ -101,7 +97,7 @@ void buscaInstrucao(instrucao *memoria, int *pc, regEstado *estado) {
     printf("\n[Busca] PC=%d, IR=%04x\n", *pc, estado->IR);
 }
 
-void programCounter(int *pc, sinaisUC *sinais, instrucao *instrucao, int zero){
+void programCounter(int *pc, sinaisUC *sinais, instrucao *instrucao, int zero){ // programCounter?
 
     // JUMP
     if((*sinais).jump == 1){
@@ -126,7 +122,7 @@ void programCounter(int *pc, sinaisUC *sinais, instrucao *instrucao, int zero){
 //------------------------------------------Decodificação (ID)-------------------------------------------------
 
 // Decodifica a instrução guardada no IR e carrega registradores
-void decodificaInstrucao(regEstado *estado, int *bReg) {
+void decodificaInstrucao(regEstado *estado, int *bReg) { // Já existiam 2 funções de decodificação - decidir qual utilizar.
     uint16_t instr = estado->IR;
     uint8_t opcode = instr >> 12;
 
@@ -168,7 +164,7 @@ void decodificaInstrucao(regEstado *estado, int *bReg) {
     }
 }
 
-//Decodifica Instrução pro salvaASM
+//Decodifica Instrução pro salvaASM(?)
 void decodificaInst(instrucao *instrucao){
 
     (*instrucao).opcode = (*instrucao).instrucao >> 12; // Pega os 4 bits do opcode
@@ -387,6 +383,7 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
     return resultado;
 }
 
+/*
 int executaInstrucao(instrucao* instrucao, sinaisUC *sinais, int *bReg, int *memDados){
     int8_t  operador1, operador2, UlaResultado=0, regDst, dadoFinal=0, valorSW;
     int zero=0, overflow = 0;
@@ -427,12 +424,12 @@ int executaInstrucao(instrucao* instrucao, sinaisUC *sinais, int *bReg, int *mem
         printf("\nPulo condicional detectado\n");
     }
     return zero;
-}
+}*/
 
 
 //-------------------------------------------Controle de fluxo-------------------------------------------------
 
-void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, int *memDados, estatInstrucoes *estatInst, regEstado *estado){
+void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado){
     while (*pc < 256 && memoria[*pc].instrucao != 0) {
         printf("\nPC = %d | Memória = %s\n", *pc, memoria[*pc].mem);
 
@@ -473,7 +470,7 @@ void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, int *memDados
 
         // EX
         unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-        int zero = executaInstrucao(&memoria[*pc], sinais, bReg, memDados);
+        int zero = executaInstrucao(&memoria[*pc], sinais, bReg);
 
         // MEM
         unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
@@ -489,7 +486,7 @@ void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, int *memDados
     printf("\nFim das instruções!\n");
 }
 
-void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, int *memDados, estatInstrucoes *estatInst, regEstado *estado) {
+void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
 
     if (*pc >= 256 || memoria[*pc].instrucao == 0) {
         printf("\nFim das instruções!\n");
@@ -535,7 +532,7 @@ void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, int *memDado
 
     // EX
     unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-    int zero = executaInstrucao(&memoria[*pc], sinais, bReg, memDados);
+    int zero = executaInstrucao(&memoria[*pc], sinais, bReg);
 
     // MEM
     unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
@@ -635,7 +632,7 @@ void imprimeInstrucao(instrucao *memoria, int pc) {
     }
 }
 
-void imprimeMemorias(instrucao *memoria, int *memDados){
+void imprimeMemorias(MemoriaUnificada *memoria){
     int opt, x;
     do{
         printf("\n1. Memória de instruções\n2. Memória de dados\n");
@@ -646,19 +643,19 @@ void imprimeMemorias(instrucao *memoria, int *memDados){
             case 1:
 	            x = 70;
 
-                printf("\n%*sMemória de Instruções:\n\n", x, "");
+                printf("\n%*sMemória de Instruções:\n\n", x, ""); 
 
                 for (int linha = 0; linha < 64; linha++) {
-                    printf(" %3d: %16s: ", linha, memoria[linha].mem);
+                    printf(" %3d: %16s: ", linha, memoria[linha].memoria);
                     imprimeInstrucao(memoria, linha);
 
-                    printf("\t %3d: %16s: ", linha + 64, memoria[linha + 64].mem);
+                    printf("\t %3d: %16s: ", linha + 64, memoria[linha + 64].memoria);
                     imprimeInstrucao(memoria, linha + 64);
 
-                    printf("\t %3d: %16s: ", linha + 128, memoria[linha + 128].mem);
+                    printf("\t %3d: %16s: ", linha + 128, memoria[linha + 128].memoria);
                     imprimeInstrucao(memoria, linha + 128);
 
-                    printf("\t %3d: %16s: ", linha + 192, memoria[linha + 192].mem);
+                    printf("\t %3d: %16s: ", linha + 192, memoria[linha + 192].memoria);
                     imprimeInstrucao(memoria, linha + 192);
 
                     printf("\n");
@@ -672,12 +669,12 @@ void imprimeMemorias(instrucao *memoria, int *memDados){
 
                 printf("\n%*sMemória de Dados:\n\n", x, "");
 
-                for (int linha = 0; linha < 64; linha++) {
+                for (int linha = 0; linha < 32; linha++) {
                     printf("%3d: %3d\t %3d: %3d\t %3d: %3d\t %3d: %3d\n",
-                    linha, memDados[linha],
-                    linha + 64, memDados[linha + 64],
-                    linha + 128, memDados[linha + 128],
-                    linha + 192, memDados[linha + 192]);
+                    128 + linha, memoria[128 + linha].memoria,
+                    128 + linha + 32, memoria[128 + linha + 32].memoria,
+                    128 + linha + 64, memoria[128 + linha + 64].memoria,
+                    128 + linha + 96, memoria[128 + linha + 96]).memoria;
                 }
                 printf("\n");
                 break;
@@ -827,15 +824,15 @@ void salvaDAT(int *memDados){
 
 //------------------------------------------------Histórico----------------------------------------------------
 
-void salvaEstado(historico *hist, int pc, int *memDados, int *bReg, estatInstrucoes *estatInst){
+void salvaEstado(historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, MemoriaUnificada *mem){
     if(hist->topo >= MAX_HIST) return;
 
     estado *e = &hist->estados[hist->topo];
 
     e->pc = pc;
 
-    for(int i=0;i<256;i++)
-        e->memDados[i] = memDados[i];
+    for(int i=INI_DADOS;i<FIM_DADOS;i++)
+        e->memDados[i] = mem->memoria[i];
 
     for(int i=0;i<8;i++)
         e->bReg[i] = bReg[i];
@@ -845,7 +842,7 @@ void salvaEstado(historico *hist, int pc, int *memDados, int *bReg, estatInstruc
     hist->topo++;
 }
 
-void voltaInstrucao(historico *hist, int *pc, int *memDados, int *bReg, estatInstrucoes *estatInst){
+void voltaInstrucao(historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst){
     if(hist->topo <= 0){
         printf("\nSem histórico!\n");
         return;
@@ -857,8 +854,8 @@ void voltaInstrucao(historico *hist, int *pc, int *memDados, int *bReg, estatIns
 
     *pc = e->pc;
 
-    for(int i=0;i<256;i++)
-        memDados[i] = e->memDados[i];
+    //for(int i=0;i<256;i++)
+     //   memDados[i] = e->memDados[i];
 
     for(int i=0;i<8;i++)
         bReg[i] = e->bReg[i];

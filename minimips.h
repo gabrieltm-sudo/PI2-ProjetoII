@@ -60,14 +60,18 @@ typedef struct {
     uint8_t funct;
     int8_t imm;
     uint8_t addr;
-    uint16_t dado;
+    uint16_t dado; // valor do dado (se for memória de dados)
     int decodificado; //    
-} instrucao;
+} instrucao; // mudar nome? Memória(?)
+
+typedef struct {
+    uint16_t memoria[TAM_MEMORIA];   //MEMORIA UNIFICADA COM OS TAMANHOS DEFINIDOS
+} MemoriaUnificada; // mesmo que instrucao->instrucao utilizada acima
 
 // struct back
 typedef struct {
     int pc;
-    int memDados[256]; //TIRAR MEM DADOS POIS AGORA É UNIFICADO
+    uint16_t memDados[128]; //TIRAR MEM DADOS POIS AGORA É UNIFICADO - É mantido pois os dados são algo que depende do estado.
     int bReg[8];
     estatInstrucoes estat;
 } estado;
@@ -76,10 +80,6 @@ typedef struct {
     estado estados[MAX_HIST];
     int topo;
 } historico;
-
-typedef struct {
-    uint16_t memoria[TAM_MEMORIA];   //MEMORIA UNIFICADA COM OS TAMANHOS DEFINIDOS
-} MemoriaUnificada;
 
 /*Instruções:
 Tipo R:
@@ -104,9 +104,9 @@ End: 8 bits;
 
 // MENU / CONTROLE DO SISTEMA
 void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc,
-         int *memDados, estatInstrucoes *estatInst, regEstado *estado);
+          estatInstrucoes *estatInst, regEstado *estado);
 void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc,
-          int *memDados, estatInstrucoes *estatInst, regEstado *estado);
+            estatInstrucoes *estatInst, regEstado *estado);
 void imprimeEstatistica(estatInstrucoes estatInst);
 void salvaASM(instrucao *memoria, int linhas);
 void salvaDAT(int *memDados);
@@ -114,7 +114,7 @@ void salvaDAT(int *memDados);
 // MEMÓRIA DE INSTRUÇÕES
 int contaLinhas(char *arq);
 void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas);
-void imprimeMemorias(instrucao *memoria, int *memDados);
+void imprimeMemorias(MemoriaUnificada *memoria);
 void imprimeInstrucao(instrucao *memoria, int pc);
 
 // PROGRAM COUNTER (PC) / BUSCA
@@ -135,7 +135,7 @@ void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
 // EXECUÇÃO
-int executaInstrucao(instrucao *instrucao, sinaisUC *sinais, int *bReg, int *memDados);
+int executaInstrucao(instrucao *instrucao, sinaisUC *sinais, int *bReg);
 int8_t extensorBit(int8_t imm);
 
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
@@ -148,8 +148,8 @@ void escreveMemDados(int *memDados, int endereco, int8_t valor);
 int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
 
 // HISTÓRICO
-void salvaEstado(historico *hist, int pc, int *memDados, int *bReg, estatInstrucoes *estatInst);
-void voltaInstrucao(historico *hist, int *pc, int *memDados, int *bReg, estatInstrucoes *estatInst);
+void salvaEstado(historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, MemoriaUnificada *mem);
+void voltaInstrucao(historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst);
 
 // -------------------------------------------------------------------------
 
