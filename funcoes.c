@@ -257,50 +257,74 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *si
     sinais->EscReg = 0;
     sinais->EscMem = 0;
     sinais->ulaOp = 0;
+    // Sinais que faltavam:
+    sinais->LerMem = 0;
+    sinais->IorD = 0;
+    sinais->IRWrite = 0;
+    sinais->PCWrite = 0;
+    sinais->PCWriteCond = 0;
+    sinais->PCSource = 0;
 
     switch(ciclo) {
-        case 0: // IF
-            sinais->IncPC = 1; // incrementa PC
+        case 0: // IF - Instruction Fetch
+            sinais->LerMem = 1;   // Habilita leitura da memória
+            sinais->IorD = 0;     // 0 = endereço vem do PC, 1 = vem da ULA
+            sinais->IRWrite = 1;  // Carrega instrução no IR
+            
+            // Calcula PC + 1 já aqui
+            sinais->UlaFonte = 1; // 1 = usa constante 1 na ULA
+            sinais->ulaOp = 0;    // 0 = ADD
+            sinais->PCWrite = 1;  // Atualiza PC = PC + 1
+            sinais->PCSource = 0; // 0 = PC vem da saída da ULA
             break;
 
-        case 1: // ID
-            // apenas prepara leitura de registradores
+        case 1: // ID - Instruction Decode / Register Fetch
+            // Lê Rs e Rt, calcula endereço do BEQ antecipado
+            sinais->UlaFonte = 3; // 3 = imediato com extensão de sinal
+            sinais->ulaOp = 0;    // ADD: faz PC + offset e guarda no ALUOut
             break;
 
         case 2: // EX
             switch(opcode) {
                 case 0: // Tipo R
-                    sinais->ulaOp = funct; // operação da ULA
-                    sinais->RegDst = 1;
+                    sinais->ulaOp = funct;
+                    sinais->RegDst = 1;   // Rd
+                    sinais->UlaFonte = 0; // Reg B
                     break;
 
                 case 4: // Addi
-                    sinais->ulaOp = 0; // ADD
-                    sinais->UlaFonte = 1; // imediato
+                    sinais->ulaOp = 0;    // ADD
+                    sinais->UlaFonte = 2; // Imediato
+                    sinais->RegDst = 0;   // Rt
                     break;
 
                 case 8: // BEQ
-                    sinais->ulaOp = 2; // SUB
-                    sinais->branch = 1;
+                    sinais->ulaOp = 1;    // SUB pra comparar
+                    sinais->UlaFonte = 0; // Reg B
+                    sinais->PCWriteCond = 1; // Só escreve PC se Zero = 1
+                    sinais->PCSource = 1;    // 1 = PC vem do ALUOut do ciclo 1
                     break;
 
                 case 11: // LW
                 case 15: // SW
-                    sinais->ulaOp = 0; // ADD (calcula endereço)
-                    sinais->UlaFonte = 1;
+                    sinais->ulaOp = 0;    // ADD - calcula endereço
+                    sinais->UlaFonte = 2; // Imediato = offset
                     break;
 
                 case 2: // JUMP
-                    sinais->jump = 1;
+                    sinais->PCWrite = 1;
+                    sinais->PCSource = 2; // 2 = Jump address
                     break;
             }
             break;
 
         case 3: // MEM
             if(opcode == 11) { // LW
-                // leitura da memória de dados
+                sinais->LerMem = 1;
+                sinais->IorD = 1; // Endereço vem da ULA
             } else if(opcode == 15) { // SW
-                sinais->EscMem = 1; // escreve memória
+                sinais->EscMem = 1;
+                sinais->IorD = 1;
             }
             break;
 
@@ -308,13 +332,15 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *si
             if(opcode == 0) { // Tipo R
                 sinais->EscReg = 1;
                 sinais->MemParaReg = 1;
-            } else if(opcode == 4 || opcode == 11) { // Addi ou LW
+            } else if(opcode == 4) { // Addi
                 sinais->EscReg = 1;
-                sinais->MemParaReg = (opcode == 11) ? 0 : 1;
+                sinais->MemParaReg = 1; // ULA
+            } else if(opcode == 11) { // LW
+                sinais->EscReg = 1;
+                sinais->MemParaReg = 0;
             }
             break;
     }
-}
 
 
 //----------------------------------------Execução (EX, MEM, WB)-----------------------------------------------
