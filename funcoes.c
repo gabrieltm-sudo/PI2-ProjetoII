@@ -31,63 +31,53 @@ int contaLinhas(char *arq){
 }
 
 // Leitura da memória
-void lerMem(char *arq, instrucao **memoria, int linhas){
-    *memoria = calloc(256, sizeof(instrucao));
-    if(memoria == NULL){
-    printf("\nMemoria não carregada!\n");
-    return;
-}
-    arquivo = fopen(arq, "r");
-    int i=0;
-    char mem[17];
-
-    if(arquivo==NULL){
-        printf("\nPermissão negada!");
+void lerMemUnificada(char *arq, MemoriaUnificada *memUnificada, int linhas) {
+    FILE *arquivo = fopen(arq, "r");
+    if (arquivo == NULL) {
+        printf("\nErro ao abrir arquivo de instruções!\n");
         return;
     }
 
-    for(i=0;i<256;i++){
-        if(linhas && fscanf(arquivo, "%16s", mem) != EOF){
-            strcpy((*memoria)[i].mem, mem);
-            (*memoria)[i].instrucao = strtoul(mem, NULL, 2);
-        } else {
-            strcpy((*memoria)[i].mem, "0000000000000000");
-            (*memoria)[i].instrucao = 0;
-        }
+    char mem[17];
+    int i = 0;
+
+    memset(memUnificada->memoria, 0, sizeof(uint16_t) * TAM_MEMORIA);
+
+    while (i < linhas && i < FIM_INST && fscanf(arquivo, "%16s", mem) != EOF) {
+        memUnificada->memoria[i] = (uint16_t)strtoul(mem, NULL, 2);
+        i++;
     }
 
     fclose(arquivo);
+    printf("\nMemória Unificada: %d instruções carregadas.\n", i);
 }
 
 int *inicializaBReg(){
     return calloc(8, sizeof(int));
 }
 
-int *inicializaMemDados(){
-    return calloc(256, sizeof(int));
-}
+//APAGAR INICIALIZA MEM DADOS
+//int *inicializaMemDados(){
+//    return calloc(256, sizeof(int));
+//}
 
-void lerMemDados(char *arqMem, int **memDados) {
-    int i=0;
-
-    if (*memDados == NULL) {
-        printf("\nErro ao alocar memória\n");
+void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas) {
+    FILE *arquivo = fopen(arq, "r");
+    if (arquivo == NULL) {
+        printf("\nErro ao abrir arquivo de instruções!\n");
         return;
     }
 
-    arquivoMemDados = fopen(arqMem, "r");
-    if (arquivoMemDados == NULL) {
-        printf("\nErro ao abrir o arquivo %s\n", arqMem);
-        return;
+    char mem[17];
+    int i = INI_DADOS;
+
+    while (i < FIM_DADOS && fscanf(arquivo, "%16s", mem) != EOF) {
+        memUnificada->memoria[i] = (uint16_t)strtoul(mem, NULL, 2);
+        i++;
     }
 
-    for(i = 0; i < 256; i++) {
-        fscanf(arquivoMemDados, "%d", &(*memDados)[i]);
-    }
-
-    printf("\nMemória carregada!\n");
-
-    fclose(arquivoMemDados);
+    fclose(arquivo);
+    printf("\nMemória Unificada: %d dados carregados.\n", i);
 }
 
 void escreveMemDados(int *memDados, int endereco, int8_t valor) {

@@ -13,13 +13,13 @@ int main(){
 
     sinaisUC sinais;
 
-    instrucao *memoria = NULL;
+    MemoriaUnificada *memoria = calloc(256, sizeof(MemoriaUnificada));
 
     historico hist;
     hist.topo = 0;
 
     int *bReg = inicializaBReg();
-    int *memDados = inicializaMemDados();
+    int *memDados = inicializaMemDados();  //APAGAR MEMORIA DE DADOS
 
     while (1) {
         printf("\nMenu:\n\n");
@@ -51,7 +51,7 @@ int main(){
                 linhas = contaLinhas(arq);
                 printf("\n%d Instruções carregadas!\n", linhas);
 
-                lerMem(arq, &memoria, linhas);
+                lerMem(arq, memoria, linhas);
                 break;
 
             case 2:
@@ -62,13 +62,13 @@ int main(){
                 fgets(arqMem, sizeof(arqMem), stdin);
                 arqMem[strcspn(arqMem, "\n")] = '\0';
 
-                lerMemDados(arqMem, &memDados);
+                lerMemDados(arqMem, memoria, linhas);
 
                 break;
 
             case 3:
                 // Imprimir memórias (tanto instruções quando dados)
-                imprimeMemorias(memoria,memDados);
+                imprimeMemorias(memoria, memDados);
 
                 break;
 

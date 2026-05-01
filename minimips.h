@@ -4,6 +4,11 @@
 #define MINIMIPS_H
 
 #define MAX_HIST 1000
+#define TAM_MEMORIA 256
+#define INI_INST 0
+#define FIM_INST 127
+#define INI_DADOS 128
+#define FIM_DADOS 255
 
 extern FILE *arquivo;
 extern FILE *arquivoMemDados;
@@ -41,7 +46,7 @@ typedef struct{
 
 // struct das instruções
 enum inst{
-    tipoI, tipoJ, tipoR
+    tipoI, tipoJ, tipoR, tipoDado
 };
 
 typedef struct {
@@ -55,13 +60,14 @@ typedef struct {
     uint8_t funct;
     int8_t imm;
     uint8_t addr;
-    int decodificado;
+    uint16_t dado;
+    int decodificado; //    
 } instrucao;
 
 // struct back
 typedef struct {
     int pc;
-    int memDados[256];
+    int memDados[256]; //TIRAR MEM DADOS POIS AGORA É UNIFICADO
     int bReg[8];
     estatInstrucoes estat;
 } estado;
@@ -70,6 +76,10 @@ typedef struct {
     estado estados[MAX_HIST];
     int topo;
 } historico;
+
+typedef struct {
+    uint16_t memoria[TAM_MEMORIA];   //MEMORIA UNIFICADA COM OS TAMANHOS DEFINIDOS
+} MemoriaUnificada;
 
 /*Instruções:
 Tipo R:
@@ -103,7 +113,7 @@ void salvaDAT(int *memDados);
 
 // MEMÓRIA DE INSTRUÇÕES
 int contaLinhas(char *arq);
-void lerMem(char *arq, instrucao **memoria, int linhas);
+void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas);
 void imprimeMemorias(instrucao *memoria, int *memDados);
 void imprimeInstrucao(instrucao *memoria, int pc);
 
@@ -132,8 +142,8 @@ int8_t extensorBit(int8_t imm);
 int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
 
 // MEMÓRIA DE DADOS
-int *inicializaMemDados();
-void lerMemDados(char *arqMem, int **memDados);
+//int *inicializaMemDados();
+void lerMemUnificada(char *arq, MemoriaUnificada *memUnificada, int linhas) ;
 void escreveMemDados(int *memDados, int endereco, int8_t valor);
 int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
 
