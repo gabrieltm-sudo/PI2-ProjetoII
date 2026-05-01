@@ -257,7 +257,6 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *si
     sinais->EscReg = 0;
     sinais->EscMem = 0;
     sinais->ulaOp = 0;
-    // Sinais que faltavam:
     sinais->LerMem = 0;
     sinais->IorD = 0;
     sinais->IRWrite = 0;
