@@ -10,75 +10,110 @@ FILE *arquivoMemDados = NULL;
 
 //---------------------------------------LEITURA E INICIALIZAÇÃO------------------------------------------------
 
-int contaLinhas(char *arq){
-    arquivo = fopen(arq, "r");
-    char ch;
-    int count=0;
-
-    if(arquivo==NULL){
-        printf("\nAcesso negado!\n");
-        return 0;
+/*void contaLinhas(char *arq, int *qtInst, int *qtDados){
+    
+    FILE *arquivo = fopen(arq, "r");
+    if (arquivo == NULL) {
+        printf("\nErro ao abrir arquivo .mem!\n");
+        return;
     }
 
-    while((ch=fgetc(arquivo))!=EOF){
-        if(ch=='\n'){
-            count++;
+    char leitura[64];
+    int lerDados = 0;
+
+    *qtInst = 0;
+    *qtDados = 0;
+
+    while(fgets(leitura, sizeof(leitura), arquivo)){
+
+        leitura[strcspn(leitura, "\n")] = '\0';
+        
+        if(strcmp(leitura, ".data") == 0){
+            lerDados = 1;
+            continue;
+        }
+
+        if(lerDados == 0){
+            (*qtInst)++;
+        }else{
+            (*qtDados)++;
         }
     }
 
     fclose(arquivo);
-    return count;
-}
+}*/
 
 // Leitura da memória
-void lerMemUnificada(char *arq, MemoriaUnificada *memUnificada, int linhas) {
+int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada) {
+    
     FILE *arquivo = fopen(arq, "r");
+
     if (arquivo == NULL) {
         printf("\nErro ao abrir arquivo .mem!\n");
-        return;
+        return 1;
     }
 
-    char mem[17];
+    char leitura[64];
+    char valor[17];
+    int lerDados = 0;
     int i = 0;
+    int qtInst = 0;
+    int end = 0;
 
-    memset(memUnificada->memoria, 0, sizeof(uint16_t) * TAM_MEMORIA);
+    while (fgets(leitura, sizeof(leitura), arquivo)) {
+        leitura[strcspn(leitura, "\n")] = '\0';
 
-    while (i < linhas && i < FIM_INST && fscanf(arquivo, "%16s", mem) != EOF) {
-        memUnificada->memoria[i] = (uint16_t)strtoul(mem, NULL, 2);
-        i++;
+        if (strcmp(leitura, ".data") == 0) {
+            lerDados = 1;
+            continue;
+        }
+
+        if (lerDados == 0) {
+            if (i >= FIM_INST) {
+                printf("\nMemória de instruções cheia!\n");
+                break;
+            }
+            strcpy(memUnificada[i].mem, leitura);
+            memUnificada[i].memoria = (uint16_t) strtoul(leitura, NULL, 2);
+
+            qtInst++;
+            i++;
+        }
+
+        else {
+
+            if (sscanf(leitura, "%d:%16s", &end, valor) == 2) {
+
+                if (end >= INI_DADOS && end <= FIM_DADOS) {
+                    strcpy(memUnificada[end].mem, valor);
+                    memUnificada[end].memoria = (uint16_t) strtoul(valor, NULL, 2);
+                    memUnificada[end].dado = (int8_t) memUnificada[end].memoria;
+                } else {
+                    printf("\nEndereço de dado inválido: %d\n", end);
+                }
+            } else {
+                printf("\nLinha de dado inválida: %s\n", leitura);
+            }
+        }
     }
 
     fclose(arquivo);
-    printf("\nMemória Unificada: %d instruções carregadas.\n", i);
+
+    printf("\nMemória carregada!\n");
+    printf("Instruções: %d\n", qtInst);
+    
+    return qtInst;
 }
 
-void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas) {
-    FILE *arquivo = fopen(arq, "r");
-    if (arquivo == NULL) {
-        printf("\nErro ao abrir arquivo .mem!\n");
-        return;
-    }
-
-    char mem[17];
-    int i = INI_DADOS;
-
-    while (i < FIM_DADOS && fscanf(arquivo, "%16s", mem) != EOF) {
-        memUnificada->memoria[i] = (uint16_t)strtoul(mem, NULL, 2);
-        i++;
-    }
-
-    fclose(arquivo);
-    printf("\nMemória Unificada: %d dados carregados.\n", i);
-}
 
 int *inicializaBReg(){
     return calloc(8, sizeof(int));
 }
 
 
-void escreveMemDados(int *memDados, int endereco, int8_t valor) {
-    if (endereco >= 0 && endereco < 256) {
-        memDados[endereco] = valor;
+void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor) {
+    if (endereco >= 128 && endereco < 256) {
+        memUnificada[endereco].dado = (int8_t) valor;
     } else {
         printf("\nErro ao escrever na memória.\n");
     }
@@ -91,13 +126,14 @@ int8_t retornaMemoria(int *memDados, uint8_t enderecoULA) {
 
 //----------------------------------------------BUSCA (IF)-----------------------------------------------------
 
-void buscaInstrucao(instrucao *memoria, int *pc, regEstado *estado) {
-    estado->IR = memoria[*pc].instrucao;
+void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
+    estado->IR = memoria[*pc].memoria ;
     (*pc)++;
     printf("\n[Busca] PC=%d, IR=%04x\n", *pc, estado->IR);
 }
 
-void programCounter(int *pc, sinaisUC *sinais, instrucao *instrucao, int zero){ // programCounter?
+// Os elementos abaixo fazem parte da decodificação e não da busca.
+void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero){ // programCounter?
 
     // JUMP
     if((*sinais).jump == 1){
@@ -119,7 +155,7 @@ void programCounter(int *pc, sinaisUC *sinais, instrucao *instrucao, int zero){ 
 }
 
 
-//------------------------------------------Decodificação (ID)-------------------------------------------------
+//------------------------------------------Decodificação (ID) - A decodificação não é apenas a decodificação da instrução. -------------------------------------------------
 
 // Decodifica a instrução guardada no IR e carrega registradores
 void decodificaInstrucao(regEstado *estado, int *bReg) { // Já existiam 2 funções de decodificação - decidir qual utilizar.
@@ -165,17 +201,17 @@ void decodificaInstrucao(regEstado *estado, int *bReg) { // Já existiam 2 funç
 }
 
 //Decodifica Instrução pro salvaASM(?)
-void decodificaInst(instrucao *instrucao){
+void decodificaInst(MemoriaUnificada *instrucao){
 
-    (*instrucao).opcode = (*instrucao).instrucao >> 12; // Pega os 4 bits do opcode
+    (*instrucao).opcode = (*instrucao).memoria  >> 12; // Pega os 4 bits do opcode
 
     switch((*instrucao).opcode){
     case 0:
         (*instrucao).tipoInst = tipoR;
-        (*instrucao).rs = ((*instrucao).instrucao >> 9) & 0x7; // pega os 3 bits do rs (desloca 6 bits para a direita e pega os 3 mais significativos que ficaram)
-        (*instrucao).rt = ((*instrucao).instrucao >> 6) & 0x7; // pega os 3 bits do rt
-        (*instrucao).rd = ((*instrucao).instrucao >> 3) & 0x7; // pega os 3 bits do rd
-        (*instrucao).funct = ((*instrucao).instrucao) & 0x7;
+        (*instrucao).rs = ((*instrucao).memoria  >> 9) & 0x7; // pega os 3 bits do rs (desloca 6 bits para a direita e pega os 3 mais significativos que ficaram)
+        (*instrucao).rt = ((*instrucao).memoria  >> 6) & 0x7; // pega os 3 bits do rt
+        (*instrucao).rd = ((*instrucao).memoria  >> 3) & 0x7; // pega os 3 bits do rd
+        (*instrucao).funct = ((*instrucao).memoria ) & 0x7;
         printf("\n[ Tipo R ] \n");
         printf("opcode: %d\n", (*instrucao).opcode);
         printf("rs: %d\n", (*instrucao).rs);
@@ -186,7 +222,7 @@ void decodificaInst(instrucao *instrucao){
 
     case 2:
         (*instrucao).tipoInst = tipoJ;
-        (*instrucao).addr = ((*instrucao).instrucao) &0xFF; // pega os 8 bits do adress
+        (*instrucao).addr = ((*instrucao).memoria ) &0xFF; // pega os 8 bits do adress
         printf("\n[ Tipo J ]\n");
         printf("opcode: %d\n", (*instrucao).opcode);
         printf("address: %d\n", (*instrucao).addr);
@@ -194,9 +230,9 @@ void decodificaInst(instrucao *instrucao){
 
     default:
         (*instrucao).tipoInst = tipoI;
-        (*instrucao).rs = ((*instrucao).instrucao >> 9) &0x7; // pega os 3 bits do rs
-        (*instrucao).rt = ((*instrucao).instrucao >> 6) &0x7; // pega os 3 bits do rt
-        (*instrucao).imm = ((*instrucao).instrucao) &0x3F; // pega os 6 bits do imediato (deve passar por um extensor antes da ULA)
+        (*instrucao).rs = ((*instrucao).memoria  >> 9) &0x7; // pega os 3 bits do rs
+        (*instrucao).rt = ((*instrucao).memoria  >> 6) &0x7; // pega os 3 bits do rt
+        (*instrucao).imm = ((*instrucao).memoria ) &0x3F; // pega os 6 bits do imediato (deve passar por um extensor antes da ULA)
         (*instrucao).imm = extensorBit((*instrucao).imm);
         printf("\n[ Tipo I ] \n");
         printf("opcode: %d\n", (*instrucao).opcode);
@@ -206,29 +242,29 @@ void decodificaInst(instrucao *instrucao){
     }
 }
 
-void decodifica(instrucao *instrucao){
+void decodifica(MemoriaUnificada *instrucao){
 
-    (*instrucao).opcode = (*instrucao).instrucao >> 12; // Pega os 4 bits do opcode
+    (*instrucao).opcode = (*instrucao).memoria  >> 12; // Pega os 4 bits do opcode
 
     switch((*instrucao).opcode){
     case 0:
         (*instrucao).tipoInst = tipoR;
-        (*instrucao).rs = ((*instrucao).instrucao >> 9) & 0x7; // pega os 3 bits do rs (desloca 6 bits para a direita e pega os 3 mais significativos que ficaram)
-        (*instrucao).rt = ((*instrucao).instrucao >> 6) & 0x7; // pega os 3 bits do rt
-        (*instrucao).rd = ((*instrucao).instrucao >> 3) & 0x7; // pega os 3 bits do rd
-        (*instrucao).funct = ((*instrucao).instrucao) & 0x7;
+        (*instrucao).rs = ((*instrucao).memoria  >> 9) & 0x7; // pega os 3 bits do rs (desloca 6 bits para a direita e pega os 3 mais significativos que ficaram)
+        (*instrucao).rt = ((*instrucao).memoria  >> 6) & 0x7; // pega os 3 bits do rt
+        (*instrucao).rd = ((*instrucao).memoria  >> 3) & 0x7; // pega os 3 bits do rd
+        (*instrucao).funct = ((*instrucao).memoria ) & 0x7;
         break;
 
     case 2:
         (*instrucao).tipoInst = tipoJ;
-        (*instrucao).addr = ((*instrucao).instrucao) &0xFF; // pega os 8 bits do adress
+        (*instrucao).addr = ((*instrucao).memoria ) &0xFF; // pega os 8 bits do adress
         break;
 
     default:
         (*instrucao).tipoInst = tipoI;
-        (*instrucao).rs = ((*instrucao).instrucao >> 9) &0x7; // pega os 3 bits do rs
-        (*instrucao).rt = ((*instrucao).instrucao >> 6) &0x7; // pega os 3 bits do rt
-        (*instrucao).imm = ((*instrucao).instrucao) &0x3F; // pega os 6 bits do imediato (deve passar por um extensor antes da ULA)
+        (*instrucao).rs = ((*instrucao).memoria  >> 9) &0x7; // pega os 3 bits do rs
+        (*instrucao).rt = ((*instrucao).memoria  >> 6) &0x7; // pega os 3 bits do rt
+        (*instrucao).imm = ((*instrucao).memoria ) &0x3F; // pega os 6 bits do imediato (deve passar por um extensor antes da ULA)
         (*instrucao).imm = extensorBit((*instrucao).imm);
     }
 }
@@ -246,7 +282,7 @@ int8_t extensorBit(int8_t imm){
 
 //---------------------------------------Unidade de Controle (UC)----------------------------------------------
 
-void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais) {
+/*void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais) {
     // Zera sinais
     sinais->branch = 0;
     sinais->jump = 0;
@@ -314,7 +350,7 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *si
             }
             break;
     }
-}
+}*/
 
 
 //----------------------------------------Execução (EX, MEM, WB)-----------------------------------------------
@@ -383,8 +419,8 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
     return resultado;
 }
 
-/*
-int executaInstrucao(instrucao* instrucao, sinaisUC *sinais, int *bReg, int *memDados){
+
+/*int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, int *memDados){
     int8_t  operador1, operador2, UlaResultado=0, regDst, dadoFinal=0, valorSW;
     int zero=0, overflow = 0;
     lerRegistradores(bReg, (*instrucao).rs, (*instrucao).rt, &operador1, &operador2);
@@ -429,8 +465,9 @@ int executaInstrucao(instrucao* instrucao, sinaisUC *sinais, int *bReg, int *mem
 
 //-------------------------------------------Controle de fluxo-------------------------------------------------
 
-void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado){
-    while (*pc < 256 && memoria[*pc].instrucao != 0) {
+// Analisar se está correto também pois aqui está como no monociclo também.
+/*void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado){
+    while (*pc < 256 && memoria[*pc].memoria  != 0) {
         printf("\nPC = %d | Memória = %s\n", *pc, memoria[*pc].mem);
 
         // IF
@@ -484,27 +521,41 @@ void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstruco
     }
 
     printf("\nFim das instruções!\n");
-}
+}*/
 
-void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
+// Lógica errada - está executando um monociclo. Cada step deve executar um ciclo.
+void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
 
-    if (*pc >= 256 || memoria[*pc].instrucao == 0) {
+    if (*pc >= 256 || memoria[*pc].memoria  == 0) {
         printf("\nFim das instruções!\n");
         return;
     }
 
     printf("\nPC = %d | Memória = %s\n", *pc, memoria[*pc].mem);
 
-    // IF
-    unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 0, sinais);
-    buscaInstrucao(memoria, pc, estado);
+    switch(*(estado->estadoEtapa)){
+        case 0:
+            buscaInstrucao(memoria, pc, estado);
+            *(estado->estadoEtapa) = 1; // Ver se não é melhor o 
+            break;
+        case 1:
+            // int zero = executaInstrucao(&memoria[*pc], sinais, bReg); // executaInstrucao é do monociclo - Devemos modificar a ULA - Talvez transformar o zero em um ponteiro para passar por referência e poder modificar na ULA
+            // programCounter(pc, sinais, memoria, zero);
+            
+            switch(memoria->opcode){
+                case 0:
+                    *(estado->estadoEtapa) = 7; // Execução da instrução tipo R
+                    break;
+        
+        }
+    }
 
-    // ID
-    unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 1, sinais);
-    decodificaInstrucao(estado, bReg);
+    
+/*
+decodificaInstrucao(estado, bReg);
 
-    // Contabiliza estatísticas
-    memoria[*pc].decodificado = 1;
+// Contabiliza estatísticas
+memoria[*pc].decodificado = 1;
     switch(memoria[*pc].tipoInst){
         case tipoI:
             switch(memoria[*pc].opcode){
@@ -530,19 +581,8 @@ void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstruc
             break;
     }
 
-    // EX
-    unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-    int zero = executaInstrucao(&memoria[*pc], sinais, bReg);
-
-    // MEM
-    unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
-
-    // WB
-    unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
-
-    programCounter(pc, sinais, &memoria[*pc], zero);
-
     (*estatInst).total++;
+    */
 }
 
 
@@ -582,7 +622,7 @@ void imprimeEstatistica(estatInstrucoes estatInst){
     printf("========================================\n\n");
 }
 
-void imprimeInstrucao(instrucao *memoria, int pc) {
+void imprimeInstrucao(MemoriaUnificada *memoria, int pc) {
     if((memoria)[pc].decodificado==0){
         decodifica(&memoria[pc]);
     }
@@ -645,17 +685,17 @@ void imprimeMemorias(MemoriaUnificada *memoria){
 
                 printf("\n%*sMemória de Instruções:\n\n", x, ""); 
 
-                for (int linha = 0; linha < 64; linha++) {
-                    printf(" %3d: %16s: ", linha, memoria[linha].memoria);
+                for (int linha = 0; linha < 32; linha++) {
+                    printf(" %3d: %16s: ", linha, memoria[linha].mem);
                     imprimeInstrucao(memoria, linha);
 
-                    printf("\t %3d: %16s: ", linha + 64, memoria[linha + 64].memoria);
+                    printf("\t %3d: %16s: ", linha + 64, memoria[linha + 64].mem);
                     imprimeInstrucao(memoria, linha + 64);
 
-                    printf("\t %3d: %16s: ", linha + 128, memoria[linha + 128].memoria);
+                    printf("\t %3d: %16s: ", linha + 128, memoria[linha + 128].mem);
                     imprimeInstrucao(memoria, linha + 128);
 
-                    printf("\t %3d: %16s: ", linha + 192, memoria[linha + 192].memoria);
+                    printf("\t %3d: %16s: ", linha + 192, memoria[linha + 192].mem);
                     imprimeInstrucao(memoria, linha + 192);
 
                     printf("\n");
@@ -671,10 +711,10 @@ void imprimeMemorias(MemoriaUnificada *memoria){
 
                 for (int linha = 0; linha < 32; linha++) {
                     printf("%3d: %3d\t %3d: %3d\t %3d: %3d\t %3d: %3d\n",
-                    128 + linha, memoria[128 + linha].memoria,
-                    128 + linha + 32, memoria[128 + linha + 32].memoria,
-                    128 + linha + 64, memoria[128 + linha + 64].memoria,
-                    128 + linha + 96, memoria[128 + linha + 96]).memoria;
+                    128 + linha, memoria[128 + linha].dado,
+                    128 + linha + 32, memoria[128 + linha + 32].dado,
+                    128 + linha + 64, memoria[128 + linha + 64].dado,
+                    128 + linha + 96, memoria[128 + linha + 96].dado);
                 }
                 printf("\n");
                 break;
@@ -688,7 +728,7 @@ void imprimeMemorias(MemoriaUnificada *memoria){
 
 //-----------------------------------------------Salvamentos---------------------------------------------------
 
-void salvaASM(instrucao *memoria, int linhas) {
+void salvaASM(MemoriaUnificada *memoria, int qntdInst) {
     int pc = 0;
     char nomeASM[50]={0}, nome[20], extensao[] = ".asm", resposta;
 
@@ -722,7 +762,7 @@ void salvaASM(instrucao *memoria, int linhas) {
         return;
     }
 
-    while(pc < linhas){
+    while(pc <= qntdInst - 1){
         if((memoria)[pc].decodificado==0){
             decodificaInst(&memoria[pc]);
         }
@@ -764,7 +804,6 @@ void salvaASM(instrucao *memoria, int linhas) {
                 fprintf(arquivo,"lw $%d, %d($%d)\n", (memoria)[pc].rt, (memoria)[pc].imm, (memoria)[pc].rs);
 
                 break;
-
             case 15: // opcode = 1111 - sw
                 fprintf(arquivo,"sw $%d, %d($%d)\n", (memoria)[pc].rt, (memoria)[pc].imm, (memoria)[pc].rs);
 
@@ -832,7 +871,7 @@ void salvaEstado(historico *hist, int pc, int *bReg, estatInstrucoes *estatInst,
     e->pc = pc;
 
     for(int i=INI_DADOS;i<FIM_DADOS;i++)
-        e->memDados[i] = mem->memoria[i];
+        e->memDados[i] = mem[i].memoria;
 
     for(int i=0;i<8;i++)
         e->bReg[i] = bReg[i];

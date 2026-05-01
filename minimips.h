@@ -20,6 +20,7 @@ typedef struct{
     int8_t A;
     int8_t B;
     int8_t ULASaida;
+    int *estadoEtapa;
 }regEstado;
 
 // struct das estatísticas
@@ -52,7 +53,7 @@ enum inst{
 typedef struct {
     char mem[17];
     enum inst tipoInst;
-    uint16_t instrucao;
+    uint16_t memoria;
     uint8_t opcode;
     uint8_t rs;
     uint8_t rt;
@@ -60,13 +61,9 @@ typedef struct {
     uint8_t funct;
     int8_t imm;
     uint8_t addr;
-    uint16_t dado; // valor do dado (se for memória de dados)
-    int decodificado; //    
-} instrucao; // mudar nome? Memória(?)
-
-typedef struct {
-    uint16_t memoria[TAM_MEMORIA];   //MEMORIA UNIFICADA COM OS TAMANHOS DEFINIDOS
-} MemoriaUnificada; // mesmo que instrucao->instrucao utilizada acima
+    int8_t dado; // valor do dado (se for memória de dados)
+    int decodificado; 
+} MemoriaUnificada;
 
 // struct back
 typedef struct {
@@ -103,30 +100,35 @@ End: 8 bits;
 // ------------------------------ PROTÓTIPOS -------------------------------
 
 // MENU / CONTROLE DO SISTEMA
-void run(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc,
-          estatInstrucoes *estatInst, regEstado *estado);
-void step(instrucao *memoria, int *bReg, sinaisUC *sinais, int *pc,
+/* void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
+          estatInstrucoes *estatInst, regEstado *estado);*/
+void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
             estatInstrucoes *estatInst, regEstado *estado);
 void imprimeEstatistica(estatInstrucoes estatInst);
-void salvaASM(instrucao *memoria, int linhas);
+void salvaASM(MemoriaUnificada *memoria, int qntdInst);
 void salvaDAT(int *memDados);
 
-// MEMÓRIA DE INSTRUÇÕES
-int contaLinhas(char *arq);
-void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas);
+// MEMÓRIA
+int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada);
+void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor);
+int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
+
+// void contaLinhas(char *arq, int *qtInst, int *qtDados);
+
+// void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas);
 void imprimeMemorias(MemoriaUnificada *memoria);
-void imprimeInstrucao(instrucao *memoria, int pc);
+void imprimeInstrucao(MemoriaUnificada *memoria, int pc);
 
 // PROGRAM COUNTER (PC) / BUSCA
-void buscaInstrucao(instrucao *memoria, int *pc, regEstado *estado);
-void programCounter(int *pc, sinaisUC *sinais, instrucao *instrucao, int zero);
+void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado);
+void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero); // Mudar nome para algo coerente
 
 // DECODIFICAÇÃO
 void decodificaInstrucao(regEstado *estado, int *bReg);   // multiciclo
-void decodificaInst(instrucao *instrucao);                // utilitário (ASM)
+void decodificaInst(MemoriaUnificada *instrucao);                // utilitário (ASM)
 
 // UNIDADE DE CONTROLE (UC)
-void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais);
+// void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais); Próxima Sprint
 
 // BANCO DE REGISTRADORES (BREG)
 int *inicializaBReg();
@@ -135,17 +137,11 @@ void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
 // EXECUÇÃO
-int executaInstrucao(instrucao *instrucao, sinaisUC *sinais, int *bReg);
+int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg);
 int8_t extensorBit(int8_t imm);
 
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
 int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
-
-// MEMÓRIA DE DADOS
-//int *inicializaMemDados();
-void lerMemUnificada(char *arq, MemoriaUnificada *memUnificada, int linhas) ;
-void escreveMemDados(int *memDados, int endereco, int8_t valor);
-int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
 
 // HISTÓRICO
 void salvaEstado(historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, MemoriaUnificada *mem);

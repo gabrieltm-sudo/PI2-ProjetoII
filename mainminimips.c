@@ -5,15 +5,16 @@
 #include "minimips.h"
 
 int main(){
-    regEstado estado = {0};   // novo registrador de estado para multiciclo
 
-    int pc = 0, opcao, linhas = 0;
+    int pc = 0, opcao, qntdInst = 0;
+
+    regEstado registradores = {0};
 
     estatInstrucoes estatInst = {0};
 
     sinaisUC sinais;
-
-    MemoriaUnificada *memoria = calloc(256, sizeof(MemoriaUnificada));
+    
+    MemoriaUnificada memoria[TAM_MEMORIA] = {0};
 
     historico hist;
     hist.topo = 0;
@@ -47,13 +48,10 @@ int main(){
                 fgets(arq, sizeof(arq), stdin);
                 arq[strcspn(arq, "\n")] = '\0';
 
-                linhas = contaLinhas(arq);
-                printf("\n%d Instruções carregadas!\n", linhas);
-
-                lerMem(arq, memoria, linhas);
+                qntdInst = lerMemUnificada(arq, memoria);
                 break;
 
-            case 2:
+            /*case 2:
                 //Carregar Mem de Dados
                 char arqMem[20];
                 printf("\nDigite o nome do arquivo da memória de dados (.dat): ");
@@ -64,7 +62,7 @@ int main(){
                 lerMemDados(arqMem, memoria, linhas);
 
                 break;
-
+            */
             case 3:
                 // Imprimir memórias (tanto instruções quanto dados)
                 imprimeMemorias(memoria);
@@ -102,7 +100,7 @@ int main(){
 
             case 6:
                 // Salvar .asm
-                salvaASM(memoria, linhas);
+                salvaASM(memoria, qntdInst);
                 break;
 
             case 7:
@@ -112,13 +110,13 @@ int main(){
 
             case 8:
                 //Executar programa (run)
-                run(memoria, bReg, &sinais, &pc, &estatInst, &estado);
+                // run(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
                 break;
 
             case 9:
                 //Executa instrução (step)
                 salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                step(memoria, bReg, &sinais, &pc, &estatInst, &estado);
+                step(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
                 break;
 
             case 10:
@@ -129,7 +127,7 @@ int main(){
             case 0:
                 //Sair
                 free(bReg);
-                free(memoria);
+                // free(memoria);
                 //free(memDados);
                 printf("\nSaindo do programa...\n");
                 return 0;
