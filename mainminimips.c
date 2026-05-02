@@ -6,7 +6,7 @@
 
 int main(){
 
-    int pc = 0, opcao, qntdInst = 0;//add na execação etapa = 0;
+    int opcao, qntdInst = 0;//add na execação etapa = 0;
 
     //regEstado registradores = {0}; add na exe
     //registradores.estadoEtapa = &etapa;
@@ -17,8 +17,8 @@ int main(){
 
     MemoriaUnificada memoria[TAM_MEMORIA] = {0};
 
-    historico hist;
-    hist.topo = 0;
+    //historico hist;
+    //hist.topo = 0;
 
     int *bReg = inicializaBReg();
 
@@ -110,19 +110,19 @@ int main(){
                 break;
 
             case 8:
-                salvaEstado(&hist, pc, bReg, &estatInst, memoria);
+                //salvaEstado(&hist, pc, bReg, &estatInst, memoria);
                 //run(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
                 break;
 
             case 9:
                 //Executa instrução (step)
-                salvaEstado(&hist, pc, bReg, &estatInst, memoria);
+                //salvaEstado(&hist, pc, bReg, &estatInst, memoria);
                 //step(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
                 break;
 
             case 10:
                 //Voltar instrução (back)
-                voltaInstrucao(&hist, &pc, bReg, &estatInst);
+                //voltaInstrucao(&hist, &pc, bReg, &estatInst);
                 break;
 
             case 0:

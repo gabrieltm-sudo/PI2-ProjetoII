@@ -141,11 +141,7 @@ void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
 // EXECUÇÃO
-<<<<<<< HEAD
 int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
-=======
-// int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg);
->>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
 int8_t extensorBit(int8_t imm);
 void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
