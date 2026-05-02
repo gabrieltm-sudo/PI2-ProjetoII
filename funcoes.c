@@ -168,7 +168,7 @@ void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instruc
     estado->B = bReg[instrucao->rt];
 
     int8_t imm_signed = (instrucao->imm & 0x20) ? (instrucao->imm | 0xC0) : instrucao->imm;
-    estado->ULASaida = (*estado->estadoEtapa) + imm_signed;
+    estado->ULASaida = (estado->estadoEtapa) + imm_signed;
 }
 
 //Decodifica Instrução pro salvaASM
@@ -253,99 +253,110 @@ int8_t extensorBit(int8_t imm){
 
 //---------------------------------------Unidade de Controle (UC)----------------------------------------------
 
-void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais) {
+void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais) {
     // Zera sinais
-    sinais->branch = 0;
-    sinais->jump = 0;
-    sinais->IncPC = 0;
-    sinais->RegDst = 0;
-    sinais->UlaFonte = 0;
-    sinais->MemParaReg = 0;
-    sinais->EscReg = 0;
-    sinais->EscMem = 0;
-    sinais->ulaOp = 0;
-    sinais->LerMem = 0;
-    sinais->IorD = 0;
-    sinais->IRWrite = 0;
-    sinais->PCWrite = 0;
-    sinais->PCWriteCond = 0;
-    sinais->PCSource = 0;
+    *sinais = (sinaisUC){0};
 
-    switch(ciclo) {
-        case 0: // IF - Instruction Fetch
-            sinais->LerMem = 1;   // Habilita leitura da memória
-            sinais->IorD = 0;     // Endereço vem do PC
-            sinais->IRWrite = 1;  // Carrega instrução no IR
+    switch(estado->estadoEtapa) {
+        case 0: //  Estado 0 - Busca
+            sinais->LerMem = 1;
+            sinais->IouD = 0;
+            sinais->IREsc = 1;
 
             // Calcula PC + 1
-            sinais->UlaFonte = 1; // Usa constante 1 na ULA
-            sinais->ulaOp = 0;    // ADD
-            sinais->PCWrite = 1;  // Atualiza PC = PC + 1
-            sinais->PCSource = 0; // PC vem da saída da ULA
-            break;
+            sinais->UlaFonteB = 1; // 01 (Usa constante 1)
+            sinais->ControleUla = 0;
+            sinais->PCEsc = 1;  // Atualiza PC
+            sinais->PCFonte = 0; // PC vem da saída da ULA
 
-        case 1: // ID - Instruction Decode / Register Fetch
-            // Lê Rs e Rt, calcula endereço do BEQ antecipado
-            sinais->UlaFonte = 3; // imediato com extensão de sinal
-            sinais->ulaOp = 0;    // ADD: PC + offset → ALUOut
-            break;
 
-        case 2: // EX
-            switch(opcode) {
+            break;
+        case 1: // Estado 1 - Decodificação
+            sinais->PCEsc = 0;
+
+            // BEQ
+            sinais->UlaFonteB = 3; // 11 - Imm extendido
+            sinais->ControleUla = 1; //(?) Soma
+            
+
+            break;
+        case 2: // 2º Estado - Execução tipo I
+            
+
+            break;
+        case 3: // 3º Estado - Acesso à memória (LW)
+            
+
+            break;
+        case 4: // 4º Estado - Finalização LW
+
+
+            break;
+        case 5: // 5º Estado - Acesso à memória (SW)
+
+
+            break;
+        case 6: // 6º Estado - addi
+
+
+            break;
+        case 7: // 7º Estado - Execução tipo R
+
+
+            break;
+        case 8: // 8º Estado - Término da tipo R
+
+
+            break;
+        case 9: // 9º Estado - Término BEQ
+
+
+            break;
+        case 10: // 10º Estado - Jump
+        
+        break;
+    }
+
+    estado->estadoEtapa = defineEstado(estado->estadoEtapa, opcode);
+}
+
+int defineEstado(int estadoAtual, uint8_t opcode){
+
+    switch(estadoAtual){
+        case 0:
+            return 1;
+        case 1:
+            switch(opcode){
                 case 0: // Tipo R
-                    sinais->ulaOp = funct;
-                    sinais->RegDst = 1;   // Rd
-                    sinais->UlaFonte = 0; // Reg B
-                    break;
-
-                case 4: // Addi
-                    sinais->ulaOp = 0;    // ADD
-                    sinais->UlaFonte = 2; // Imediato
-                    sinais->RegDst = 0;   // Rt
-                    break;
-
+                    return 7;
+                case 2: // Jump
+                    return 10;
                 case 8: // BEQ
-                    sinais->ulaOp = 1;    // SUB para comparar
-                    sinais->UlaFonte = 0; // Reg B
-                    sinais->PCWriteCond = 1; // Só escreve PC se Zero=1
-                    sinais->PCSource = 1;    // PC vem do ALUOut do ciclo 1
-                    break;
+                    return 9;
+                default: // Tipo I (addi, sw e lw)
+                    return 2;
+                    }
+        case 2:
+            switch(opcode){
+                case 4: // addi
+                    return 6;
+                case 11: // lw
+                    return 3;
+                case 15: // sw
+                    return 5;
+                    }
+        case 3:
+            return 4;
+        case 7:
+            return 8;
 
-                case 11: // LW
-                case 15: // SW
-                    sinais->ulaOp = 0;    // ADD - calcula endereço
-                    sinais->UlaFonte = 2; // Imediato = offset
-                    break;
-
-                case 2: // JUMP
-                    sinais->PCWrite = 1;
-                    sinais->PCSource = 2; // Jump address
-                    break;
-            }
-            break;
-
-        case 3: // MEM
-            if(opcode == 11) { // LW
-                sinais->LerMem = 1;
-                sinais->IorD = 1; // Endereço vem da ULA
-            } else if(opcode == 15) { // SW
-                sinais->EscMem = 1;
-                sinais->IorD = 1;
-            }
-            break;
-
-        case 4: // WB
-            if(opcode == 0) { // Tipo R
-                sinais->EscReg = 1;
-                sinais->MemParaReg = 0; // resultado vem da ULA
-            } else if(opcode == 4) { // Addi
-                sinais->EscReg = 1;
-                sinais->MemParaReg = 0; // resultado vem da ULA
-            } else if(opcode == 11) { // LW
-                sinais->EscReg = 1;
-                sinais->MemParaReg = 1; // resultado vem da memória
-            }
-            break;
+        case 4:
+        case 5:
+        case 6:
+        case 8:
+        case 9:
+        case 10:
+            return 0;
     }
 }
 
@@ -472,6 +483,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estat
 
     printf("\nPC = %d | Memória = %s\n", *pc, memoria[*pc].mem);
 
+    
     switch (*(estado->estadoEtapa)) {
         case 0: // IF
             unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 0, sinais);

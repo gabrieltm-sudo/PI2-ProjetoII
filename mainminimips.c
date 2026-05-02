@@ -6,14 +6,15 @@
 
 int main(){
 
-    int opcao, qntdInst = 0;//add na execação etapa = 0;
+    int opcao, qntdInst = 0;
 
-    //regEstado registradores = {0}; add na exe
-    //registradores.estadoEtapa = &etapa;
+    //regEstado registradores = {0}; ?? (add na exe) ??
+    //registradores.estadoEtapa = &etapa; ??
 
     estatInstrucoes estatInst = {0};
-
-    //sinaisUC sinais; add na exe
+    
+    // regEstado regEstado; enviado no run e step.
+    // sinaisUC sinais; é enviado no run e step.
 
     MemoriaUnificada memoria[TAM_MEMORIA] = {0};
 
@@ -111,13 +112,13 @@ int main(){
 
             case 8:
                 //salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                //run(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
+                //run(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
                 break;
 
             case 9:
                 //Executa instrução (step)
                 //salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                //step(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
+                //step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
                 break;
 
             case 10:

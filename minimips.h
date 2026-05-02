@@ -20,7 +20,7 @@ typedef struct{
     int8_t A;
     int8_t B;
     int8_t ULASaida;
-    int *estadoEtapa;   // Estado/Ciclo da Instrução Atual
+    int estadoEtapa;   // Estado/Ciclo da Instrução Atual
 }regEstado;
 
 // struct das estatísticas
@@ -35,20 +35,19 @@ typedef struct{
 // struct de sinais
 typedef struct{
     uint8_t branch;
-    uint8_t jump;
-    uint8_t IncPC;
     uint8_t RegDst;
-    uint8_t UlaFonte;
+    uint8_t UlaFonteA;
+    uint8_t UlaFonteB;
     uint8_t MemParaReg;
     uint8_t EscReg;
     uint8_t EscMem;
-    uint8_t ulaOp;
     uint8_t LerMem;
-    uint8_t IorD;
-    uint8_t IRWrite;
-    uint8_t PCWrite;
-    uint8_t PCWriteCond;
-    uint8_t PCSource;
+    uint8_t ControleUla;
+    uint8_t IouD;
+    uint8_t IREsc;
+    uint8_t PCEsc;
+    // uint8_t PCWriteCond;
+    uint8_t PCFonte;
 }sinaisUC;
 
 // struct das instruções
@@ -77,7 +76,7 @@ typedef struct {
     uint16_t memDados[128]; //TIRAR MEM DADOS POIS AGORA É UNIFICADO - É mantido pois os dados são algo que depende do estado.
     int bReg[8];
     estatInstrucoes estat;
-} estado;
+} estado; //estadoAnterior
 
 typedef struct {
     estado estados[MAX_HIST];
@@ -132,7 +131,8 @@ void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instruc
 void decodificaInst(MemoriaUnificada *instrucao);                // utilitário (ASM)
 
 // UNIDADE DE CONTROLE (UC)
-// void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais); Próxima Sprint
+void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais);
+int defineEstado(int estadoAtual, uint8_t opcode);
 
 // BANCO DE REGISTRADORES (BREG)
 int *inicializaBReg();
