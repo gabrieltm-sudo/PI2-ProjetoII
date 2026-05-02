@@ -20,7 +20,7 @@ typedef struct{
     int8_t A;
     int8_t B;
     int8_t ULASaida;
-    int *estadoEtapa;
+    int *estadoEtapa;   // Estado/Ciclo da Instrução Atual
 }regEstado;
 
 // struct das estatísticas
@@ -119,7 +119,7 @@ int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
 void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria);
 
 // void contaLinhas(char *arq, int *qtInst, int *qtDados);
-
+//      Essas duas provavelmente serão apagadas pois não são mais utilizadas
 // void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas);
 void imprimeMemorias(MemoriaUnificada *memoria);
 void imprimeInstrucao(MemoriaUnificada *memoria, int pc);
@@ -141,7 +141,11 @@ void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
 // EXECUÇÃO
+<<<<<<< HEAD
 int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
+=======
+// int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg);
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
 int8_t extensorBit(int8_t imm);
 void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)

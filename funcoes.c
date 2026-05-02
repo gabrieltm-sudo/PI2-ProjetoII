@@ -135,10 +135,16 @@ void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, reg
 //----------------------------------------------BUSCA (IF)-----------------------------------------------------
 
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
+<<<<<<< HEAD
     // Carrega instrução no IR
     estado->IR = memoria[*pc].memoria;
     // Incrementa PC
     (*pc)++;
+=======
+    estado->IR = memoria[*pc].memoria ;
+    (*pc)++; // Não sabemos se precisa chamar a ULA pra fazer esses cálculos pois não temos mais os somadores. O PC vai direto na ULA.
+    printf("\n[Busca] PC=%d, IR=%04x\n", *pc, estado->IR);
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
 }
 
 void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) {
@@ -149,10 +155,18 @@ void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int 
     }
 }
 
+<<<<<<< HEAD
 //------------------------------------------Decodificação (ID)-------------------------------------------------
 
 // Decodifica a instrução guardada no IR e carrega registradores
 void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instrucao) {
+=======
+
+//------------------------------------------Decodificação (ID) - A decodificação (etapa) não é apenas a decodificação da instrução 0 A parte de cima também conta -------------------------------------------------
+
+// Decodifica a instrução guardada no IR e carrega registradores
+void decodificaInstrucao(regEstado *estado, int *bReg) { // Já existiam 2 funções de decodificação - devemos decidir como modificar para que tenhamos apenas uma que seja chamada em todas funções
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
     uint16_t instr = estado->IR;
 
     instrucao->opcode = (instr >> 12) & 0xF;
@@ -169,8 +183,12 @@ void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instruc
     estado->ULASaida = (*estado->estadoEtapa) + imm_signed;
 }
 
+<<<<<<< HEAD
 
 //Decodifica Instrução pro salvaASM(?)
+=======
+//Decodifica Instrução pro salvaASM
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
 void decodificaInst(MemoriaUnificada *instrucao){
 
     (*instrucao).opcode = (*instrucao).memoria  >> 12; // Pega os 4 bits do opcode
@@ -414,6 +432,7 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
     return resultado;
 }
 
+<<<<<<< HEAD
 void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado) {
     if (instrucao->opcode == 0) { // Tipo R
         bReg[instrucao->rd] = estado->ULASaida;
@@ -421,6 +440,18 @@ void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEsta
         bReg[instrucao->rt] = estado->ULASaida;
     } else if (instrucao->opcode == 11) { // LW
         bReg[instrucao->rt] = estado->MDR;
+=======
+// Bloco do monociclo - apagar
+/*int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, int *memDados){
+    int8_t  operador1, operador2, UlaResultado=0, regDst, dadoFinal=0, valorSW;
+    int zero=0, overflow = 0;
+    lerRegistradores(bReg, (*instrucao).rs, (*instrucao).rt, &operador1, &operador2);
+
+    valorSW = operador2;
+
+    if((*sinais).UlaFonte==1){
+        operador2=(*instrucao).imm;
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
     }
 }
 
@@ -461,6 +492,10 @@ void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatI
     printf("\nFim das instruções!\n");
 }
 
+<<<<<<< HEAD
+=======
+// Lógica errada - está executando um monociclo. Cada step deve executar um ciclo. (Comecei mais ou menos ali para ter uma ideia de como deve rodar a partir do estado sempre)
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
 
     if (*pc >= 256 || memoria[*pc].memoria == 0) {
@@ -474,9 +509,14 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estat
         case 0: // IF
             unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 0, sinais);
             buscaInstrucao(memoria, pc, estado);
+<<<<<<< HEAD
             *(estado->estadoEtapa) = 1;
+=======
+            *(estado->estadoEtapa) = 1; // Ver se não é melhor a unidade de controle decidir qual é o próximo estado sempre.
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
             break;
 
+<<<<<<< HEAD
         case 1: // ID
             unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 1, sinais);
             decodificaInstrucao(estado, bReg, &memoria[*pc]);
@@ -563,6 +603,10 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estat
     }
 }
 
+=======
+    
+/*   Parte abaixo ok
+>>>>>>> 1ce7b7b32058eafb7e13bafd47034c58010fdb39
 decodificaInstrucao(estado, bReg);
 
 // Contabiliza estatísticas
@@ -695,18 +739,12 @@ void imprimeMemorias(MemoriaUnificada *memoria){
 
                 printf("\n%*sMemória de Instruções:\n\n", x, "");
 
-                for (int linha = 0; linha < 32; linha++) {
+                for (int linha = 0; linha < 64; linha++) {
                     printf(" %3d: %16s: ", linha, memoria[linha].mem);
                     imprimeInstrucao(memoria, linha);
 
                     printf("\t %3d: %16s: ", linha + 64, memoria[linha + 64].mem);
                     imprimeInstrucao(memoria, linha + 64);
-
-                    printf("\t %3d: %16s: ", linha + 128, memoria[linha + 128].mem);
-                    imprimeInstrucao(memoria, linha + 128);
-
-                    printf("\t %3d: %16s: ", linha + 192, memoria[linha + 192].mem);
-                    imprimeInstrucao(memoria, linha + 192);
 
                     printf("\n");
                 }
