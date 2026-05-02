@@ -11,7 +11,7 @@ FILE *arquivoMemDados = NULL;
 //---------------------------------------LEITURA E INICIALIZAÇÃO------------------------------------------------
 
 /*void contaLinhas(char *arq, int *qtInst, int *qtDados){
-    
+
     FILE *arquivo = fopen(arq, "r");
     if (arquivo == NULL) {
         printf("\nErro ao abrir arquivo .mem!\n");
@@ -27,7 +27,7 @@ FILE *arquivoMemDados = NULL;
     while(fgets(leitura, sizeof(leitura), arquivo)){
 
         leitura[strcspn(leitura, "\n")] = '\0';
-        
+
         if(strcmp(leitura, ".data") == 0){
             lerDados = 1;
             continue;
@@ -45,7 +45,7 @@ FILE *arquivoMemDados = NULL;
 
 // Leitura da memória
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada) {
-    
+
     FILE *arquivo = fopen(arq, "r");
 
     if (arquivo == NULL) {
@@ -101,7 +101,7 @@ int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada) {
 
     printf("\nMemória carregada!\n");
     printf("Instruções: %d\n", qtInst);
-    
+
     return qtInst;
 }
 
@@ -123,82 +123,52 @@ int8_t retornaMemoria(int *memDados, uint8_t enderecoULA) {
     return memDados[enderecoULA];
 }
 
+void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria) {
+    if (instrucao->opcode == 11) { // LW
+        estado->MDR = memoria[estado->ULASaida].memoria;
+    } else if (instrucao->opcode == 15) { // SW
+        memoria[estado->ULASaida].memoria = estado->B;
+    }
+}
+
 
 //----------------------------------------------BUSCA (IF)-----------------------------------------------------
 
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
-    estado->IR = memoria[*pc].memoria ;
+    // Carrega instrução no IR
+    estado->IR = memoria[*pc].memoria;
+    // Incrementa PC
     (*pc)++;
-    printf("\n[Busca] PC=%d, IR=%04x\n", *pc, estado->IR);
 }
 
-// Os elementos abaixo fazem parte da decodificação e não da busca.
-void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero){ // programCounter?
-
-    // JUMP
-    if((*sinais).jump == 1){
-        *pc = (*instrucao).addr;
-        printf("\nPC atual: %d.\n", *pc);
-        return;
+void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) {
+    if (instrucao->opcode == 8 && zero) { // BEQ
+        *pc = estado->ULASaida;
+    } else if (instrucao->opcode == 2) { // JUMP
+        *pc = estado->IR & 0xFF; // 8 bits menos significativos
     }
-
-    // BRANCH
-    if((*sinais).branch == 1 && zero == 1){
-        *pc = *pc + (*instrucao).imm + 1;
-        printf("\nPC atual: %d.\n", *pc);
-        return;
-    }
-
-    // execução normal
-    (*pc)++;
-    printf("\n[ PC+1 ]\nPC atual: %d.\n", *pc);
 }
 
-
-//------------------------------------------Decodificação (ID) - A decodificação não é apenas a decodificação da instrução. -------------------------------------------------
+//------------------------------------------Decodificação (ID)-------------------------------------------------
 
 // Decodifica a instrução guardada no IR e carrega registradores
-void decodificaInstrucao(regEstado *estado, int *bReg) { // Já existiam 2 funções de decodificação - decidir qual utilizar.
+void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instrucao) {
     uint16_t instr = estado->IR;
-    uint8_t opcode = instr >> 12;
 
-    switch(opcode) {
-        case 0: { // Tipo R
-            uint8_t rs = (instr >> 9) & 0x7;
-            uint8_t rt = (instr >> 6) & 0x7;
-            uint8_t rd = (instr >> 3) & 0x7;
-            uint8_t funct = instr & 0x7;
+    instrucao->opcode = (instr >> 12) & 0xF;
+    instrucao->rs     = (instr >> 9) & 0x7;
+    instrucao->rt     = (instr >> 6) & 0x7;
+    instrucao->rd     = (instr >> 3) & 0x7;
+    instrucao->funct  = instr & 0x7;
+    instrucao->imm    = instr & 0x3F;
 
-            estado->A = bReg[rs];
-            estado->B = bReg[rt];
+    estado->A = bReg[instrucao->rs];
+    estado->B = bReg[instrucao->rt];
 
-            printf("\n[Decodificação] Tipo R\n");
-            printf("opcode=%d, rs=%d, rt=%d, rd=%d, funct=%d\n", opcode, rs, rt, rd, funct);
-            break;
-        }
-
-        case 2: { // Tipo J
-            uint8_t addr = instr & 0xFF;
-            printf("\n[Decodificação] Tipo J\n");
-            printf("opcode=%d, addr=%d\n", opcode, addr);
-            break;
-        }
-
-        default: { // Tipo I
-            uint8_t rs = (instr >> 9) & 0x7;
-            uint8_t rt = (instr >> 6) & 0x7;
-            int8_t imm = instr & 0x3F;
-            imm = extensorBit(imm);
-
-            estado->A = bReg[rs];
-            estado->B = bReg[rt];
-
-            printf("\n[Decodificação] Tipo I\n");
-            printf("opcode=%d, rs=%d, rt=%d, imm=%d\n", opcode, rs, rt, imm);
-            break;
-        }
-    }
+    int8_t imm_signed = (instrucao->imm & 0x20) ? (instrucao->imm | 0xC0) : instrucao->imm;
+    estado->ULASaida = (*estado->estadoEtapa) + imm_signed;
 }
+
 
 //Decodifica Instrução pro salvaASM(?)
 void decodificaInst(MemoriaUnificada *instrucao){
@@ -212,7 +182,7 @@ void decodificaInst(MemoriaUnificada *instrucao){
         (*instrucao).rt = ((*instrucao).memoria  >> 6) & 0x7; // pega os 3 bits do rt
         (*instrucao).rd = ((*instrucao).memoria  >> 3) & 0x7; // pega os 3 bits do rd
         (*instrucao).funct = ((*instrucao).memoria ) & 0x7;
-        printf("\n[ Tipo R ] \n");
+        printf("\n[ Tipo Rzz ] \n");
         printf("opcode: %d\n", (*instrucao).opcode);
         printf("rs: %d\n", (*instrucao).rs);
         printf("rt: %d\n", (*instrucao).rt);
@@ -282,7 +252,7 @@ int8_t extensorBit(int8_t imm){
 
 //---------------------------------------Unidade de Controle (UC)----------------------------------------------
 
-/*void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais) {
+void unidadeControleMulti(uint8_t opcode, uint8_t funct, int ciclo, sinaisUC *sinais) {
     // Zera sinais
     sinais->branch = 0;
     sinais->jump = 0;
@@ -303,20 +273,20 @@ int8_t extensorBit(int8_t imm){
     switch(ciclo) {
         case 0: // IF - Instruction Fetch
             sinais->LerMem = 1;   // Habilita leitura da memória
-            sinais->IorD = 0;     // 0 = endereço vem do PC, 1 = vem da ULA
+            sinais->IorD = 0;     // Endereço vem do PC
             sinais->IRWrite = 1;  // Carrega instrução no IR
-            
-            // Calcula PC + 1 já aqui
-            sinais->UlaFonte = 1; // 1 = usa constante 1 na ULA
-            sinais->ulaOp = 0;    // 0 = ADD
+
+            // Calcula PC + 1
+            sinais->UlaFonte = 1; // Usa constante 1 na ULA
+            sinais->ulaOp = 0;    // ADD
             sinais->PCWrite = 1;  // Atualiza PC = PC + 1
-            sinais->PCSource = 0; // 0 = PC vem da saída da ULA
+            sinais->PCSource = 0; // PC vem da saída da ULA
             break;
 
         case 1: // ID - Instruction Decode / Register Fetch
             // Lê Rs e Rt, calcula endereço do BEQ antecipado
-            sinais->UlaFonte = 3; // 3 = imediato com extensão de sinal
-            sinais->ulaOp = 0;    // ADD: faz PC + offset e guarda no ALUOut
+            sinais->UlaFonte = 3; // imediato com extensão de sinal
+            sinais->ulaOp = 0;    // ADD: PC + offset → ALUOut
             break;
 
         case 2: // EX
@@ -334,10 +304,10 @@ int8_t extensorBit(int8_t imm){
                     break;
 
                 case 8: // BEQ
-                    sinais->ulaOp = 1;    // SUB pra comparar
+                    sinais->ulaOp = 1;    // SUB para comparar
                     sinais->UlaFonte = 0; // Reg B
-                    sinais->PCWriteCond = 1; // Só escreve PC se Zero = 1
-                    sinais->PCSource = 1;    // 1 = PC vem do ALUOut do ciclo 1
+                    sinais->PCWriteCond = 1; // Só escreve PC se Zero=1
+                    sinais->PCSource = 1;    // PC vem do ALUOut do ciclo 1
                     break;
 
                 case 11: // LW
@@ -348,7 +318,7 @@ int8_t extensorBit(int8_t imm){
 
                 case 2: // JUMP
                     sinais->PCWrite = 1;
-                    sinais->PCSource = 2; // 2 = Jump address
+                    sinais->PCSource = 2; // Jump address
                     break;
             }
             break;
@@ -366,18 +336,17 @@ int8_t extensorBit(int8_t imm){
         case 4: // WB
             if(opcode == 0) { // Tipo R
                 sinais->EscReg = 1;
-                sinais->MemParaReg = 1;
+                sinais->MemParaReg = 0; // resultado vem da ULA
             } else if(opcode == 4) { // Addi
                 sinais->EscReg = 1;
-                sinais->MemParaReg = 1; // ULA
+                sinais->MemParaReg = 0; // resultado vem da ULA
             } else if(opcode == 11) { // LW
                 sinais->EscReg = 1;
-                sinais->MemParaReg = 0;
+                sinais->MemParaReg = 1; // resultado vem da memória
             }
             break;
     }
-}*/
-
+}
 
 //----------------------------------------Execução (EX, MEM, WB)-----------------------------------------------
 
@@ -445,139 +414,155 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
     return resultado;
 }
 
-
-/*int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, int *memDados){
-    int8_t  operador1, operador2, UlaResultado=0, regDst, dadoFinal=0, valorSW;
-    int zero=0, overflow = 0;
-    lerRegistradores(bReg, (*instrucao).rs, (*instrucao).rt, &operador1, &operador2);
-
-    valorSW = operador2;
-
-    if((*sinais).UlaFonte==1){
-        operador2=(*instrucao).imm;
+void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado) {
+    if (instrucao->opcode == 0) { // Tipo R
+        bReg[instrucao->rd] = estado->ULASaida;
+    } else if (instrucao->opcode == 4) { // addi
+        bReg[instrucao->rt] = estado->ULASaida;
+    } else if (instrucao->opcode == 11) { // LW
+        bReg[instrucao->rt] = estado->MDR;
     }
+}
 
-    UlaResultado = ULA(operador1, operador2, (*sinais).ulaOp, &zero, &overflow);
-
-    if((*sinais).EscMem==1){
-        escreveMemDados(memDados, (int)UlaResultado, valorSW);
-        printf("\nSW: Valor %d guardado no endereço %d\n", valorSW, UlaResultado);
-    }
-
-    if((*sinais).MemParaReg==1){
-        dadoFinal = UlaResultado;
-    }else if((*sinais).EscReg==1){
-        dadoFinal = retornaMemoria(memDados, (uint8_t)UlaResultado);
-        printf("\nLW: Valor %d lido do endereço %d\n", dadoFinal, UlaResultado);
-    }
-
-    if((*sinais).RegDst==1){
-        regDst = (*instrucao).rd;
-    }else{
-        regDst = (*instrucao).rt;
-    }
-
-    if((*sinais).EscReg==1){
-        escreveRegistrador(bReg, regDst, dadoFinal, (*sinais).EscReg);
-        printf("\nRegistrador a ser escrito: $%d com o valor %d\n", regDst, dadoFinal);
-    }
-
-    if((*sinais).branch==1 && zero == 1){
-        printf("\nPulo condicional detectado\n");
+/*
+int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado) {
+    int zero = 0;
+    switch(instrucao->opcode) {
+        case 0: // Tipo R
+            switch(instrucao->funct) {
+                case 0: estado->ULASaida = estado->A + estado->B; break;
+                case 2: estado->ULASaida = estado->A - estado->B; break;
+                case 4: estado->ULASaida = estado->A & estado->B; break;
+                case 5: estado->ULASaida = estado->A | estado->B; break;
+            }
+            break;
+        case 4: // addi
+            estado->ULASaida = estado->A + instrucao->imm;
+            break;
+        case 8: // beq
+            zero = (estado->A == estado->B);
+            break;
+        case 11: // lw
+        case 15: // sw
+            estado->ULASaida = estado->A + instrucao->imm;
+            break;
     }
     return zero;
-}*/
-
+}
 
 //-------------------------------------------Controle de fluxo-------------------------------------------------
 
-// Analisar se está correto também pois aqui está como no monociclo também.
-/*void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado){
-    while (*pc < 256 && memoria[*pc].memoria  != 0) {
-        printf("\nPC = %d | Memória = %s\n", *pc, memoria[*pc].mem);
+void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
 
-        // IF
-        unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 0, sinais);
-        buscaInstrucao(memoria, pc, estado);
-
-        // ID
-        unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 1, sinais);
-        decodificaInstrucao(estado, bReg);
-
-        // Contabiliza estatísticas (igual ao código antigo)
-        memoria[*pc].decodificado = 1;
-        switch(memoria[*pc].tipoInst){
-            case tipoI:
-                switch(memoria[*pc].opcode){
-                    case 4: (*estatInst).addi++; break;
-                    case 8: (*estatInst).beq++; break;
-                    case 11: (*estatInst).lw++; break;
-                    case 15: (*estatInst).sw++; break;
-                }
-                (*estatInst).tipoI++;
-                break;
-            case tipoJ:
-                (*estatInst).j++;
-                (*estatInst).tipoJ++;
-                break;
-            case tipoR:
-                switch(memoria[*pc].funct){
-                    case 0: (*estatInst).add++; break;
-                    case 2: (*estatInst).sub++; break;
-                    case 4: (*estatInst).and++; break;
-                    case 5: (*estatInst).or++; break;
-                }
-                (*estatInst).tipoR++;
-                break;
-        }
-
-        // EX
-        unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-        int zero = executaInstrucao(&memoria[*pc], sinais, bReg);
-
-        // MEM
-        unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
-
-        // WB
-        unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
-
-        programCounter(pc, sinais, &memoria[*pc], zero);
-
-        (*estatInst).total++;
+    while (*pc < 256 && memoria[*pc].memoria != 0) {
+        step(memoria, bReg, sinais, pc, estatInst, estado);
     }
 
     printf("\nFim das instruções!\n");
-}*/
+}
 
-// Lógica errada - está executando um monociclo. Cada step deve executar um ciclo.
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
 
-    if (*pc >= 256 || memoria[*pc].memoria  == 0) {
+    if (*pc >= 256 || memoria[*pc].memoria == 0) {
         printf("\nFim das instruções!\n");
         return;
     }
 
     printf("\nPC = %d | Memória = %s\n", *pc, memoria[*pc].mem);
 
-    switch(*(estado->estadoEtapa)){
-        case 0:
+    switch (*(estado->estadoEtapa)) {
+        case 0: // IF
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 0, sinais);
             buscaInstrucao(memoria, pc, estado);
-            *(estado->estadoEtapa) = 1; // Ver se não é melhor o 
+            *(estado->estadoEtapa) = 1;
             break;
-        case 1:
-            // int zero = executaInstrucao(&memoria[*pc], sinais, bReg); // executaInstrucao é do monociclo - Devemos modificar a ULA - Talvez transformar o zero em um ponteiro para passar por referência e poder modificar na ULA
-            // programCounter(pc, sinais, memoria, zero);
-            
-            switch(memoria->opcode){
-                case 0:
-                    *(estado->estadoEtapa) = 7; // Execução da instrução tipo R
-                    break;
-        
-        }
-    }
 
-    
-/*
+        case 1: // ID
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 1, sinais);
+            decodificaInstrucao(estado, bReg, &memoria[*pc]);
+
+            // Decide próximo estado conforme opcode
+            switch (memoria[*pc].opcode) {
+                case 0:  *(estado->estadoEtapa) = 7; break; // Tipo R
+                case 4:  *(estado->estadoEtapa) = 2; break; // addi
+                case 8:  *(estado->estadoEtapa) = 9; break; // beq
+                case 11: *(estado->estadoEtapa) = 2; break; // lw
+                case 15: *(estado->estadoEtapa) = 2; break; // sw
+                case 2:  *(estado->estadoEtapa) = 10; break; // jump
+            }
+            break;
+
+        case 2: // EX tipo I (lw/sw/addi)
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
+            executaInstrucao(&memoria[*pc], sinais, bReg, estado);
+            if (memoria[*pc].opcode == 11) *(estado->estadoEtapa) = 3; // lw → MEM
+            else if (memoria[*pc].opcode == 15) *(estado->estadoEtapa) = 5; // sw → MEM
+            else if (memoria[*pc].opcode == 4) *(estado->estadoEtapa) = 6; // addi → WB
+            break;
+
+        case 3: // MEM lw
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
+            acessoMemoria(&memoria[*pc], sinais, bReg, estado, memoria);
+            *(estado->estadoEtapa) = 4; // próximo é WB
+            break;
+
+        case 4: // WB lw
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
+            writeBack(&memoria[*pc], sinais, bReg, estado);
+            *(estado->estadoEtapa) = 0; // volta para busca
+            (*estatInst).lw++;
+            (*estatInst).total++;
+            break;
+
+        case 5: // MEM sw
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
+            acessoMemoria(&memoria[*pc], sinais, bReg, estado, memoria);
+            *(estado->estadoEtapa) = 0; // termina
+            (*estatInst).sw++;
+            (*estatInst).total++;
+            break;
+
+        case 6: // WB addi
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
+            writeBack(&memoria[*pc], sinais, bReg, estado);
+            *(estado->estadoEtapa) = 0;
+            (*estatInst).addi++;
+            (*estatInst).total++;
+            break;
+
+        case 7: // EX tipo R
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
+            executaInstrucao(&memoria[*pc], sinais, bReg, estado);
+            *(estado->estadoEtapa) = 8;
+            break;
+
+        case 8: // WB tipo R
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
+            writeBack(&memoria[*pc], sinais, bReg, estado);
+            *(estado->estadoEtapa) = 0;
+            (*estatInst).tipoR++;
+            (*estatInst).total++;
+            break;
+
+        case 9: // EX beq
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
+            int zero = executaInstrucao(&memoria[*pc], sinais, bReg, estado);
+            programCounter(pc, sinais, &memoria[*pc], zero, estado);
+            *(estado->estadoEtapa) = 0;
+            (*estatInst).beq++;
+            (*estatInst).total++;
+            break;
+
+        case 10: // EX jump
+            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
+            programCounter(pc, sinais, &memoria[*pc], 0, estado);
+            *(estado->estadoEtapa) = 0;
+            (*estatInst).j++;
+            (*estatInst).total++;
+            break;
+    }
+}
+
 decodificaInstrucao(estado, bReg);
 
 // Contabiliza estatísticas
@@ -608,9 +593,8 @@ memoria[*pc].decodificado = 1;
     }
 
     (*estatInst).total++;
-    */
 }
-
+*/
 
 //-----------------------------------------------Impressões----------------------------------------------------
 
@@ -709,7 +693,7 @@ void imprimeMemorias(MemoriaUnificada *memoria){
             case 1:
 	            x = 70;
 
-                printf("\n%*sMemória de Instruções:\n\n", x, ""); 
+                printf("\n%*sMemória de Instruções:\n\n", x, "");
 
                 for (int linha = 0; linha < 32; linha++) {
                     printf(" %3d: %16s: ", linha, memoria[linha].mem);

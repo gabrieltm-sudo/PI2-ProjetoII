@@ -6,14 +6,15 @@
 
 int main(){
 
-    int pc = 0, opcao, qntdInst = 0;
+    int pc = 0, opcao, qntdInst = 0;//add na execação etapa = 0;
 
-    regEstado registradores = {0};
+    //regEstado registradores = {0}; add na exe
+    //registradores.estadoEtapa = &etapa;
 
     estatInstrucoes estatInst = {0};
 
-    sinaisUC sinais;
-    
+    //sinaisUC sinais; add na exe
+
     MemoriaUnificada memoria[TAM_MEMORIA] = {0};
 
     historico hist;
@@ -109,14 +110,14 @@ int main(){
                 break;
 
             case 8:
-                //Executar programa (run)
-                // run(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
+                salvaEstado(&hist, pc, bReg, &estatInst, memoria);
+                //run(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
                 break;
 
             case 9:
                 //Executa instrução (step)
                 salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                step(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
+                //step(memoria, bReg, &sinais, &pc, &estatInst, &registradores);
                 break;
 
             case 10:

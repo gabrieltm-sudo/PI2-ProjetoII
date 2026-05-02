@@ -43,6 +43,12 @@ typedef struct{
     uint8_t EscReg;
     uint8_t EscMem;
     uint8_t ulaOp;
+    uint8_t LerMem;
+    uint8_t IorD;
+    uint8_t IRWrite;
+    uint8_t PCWrite;
+    uint8_t PCWriteCond;
+    uint8_t PCSource;
 }sinaisUC;
 
 // struct das instruções
@@ -62,7 +68,7 @@ typedef struct {
     int8_t imm;
     uint8_t addr;
     int8_t dado; // valor do dado (se for memória de dados)
-    int decodificado; 
+    int decodificado;
 } MemoriaUnificada;
 
 // struct back
@@ -100,10 +106,8 @@ End: 8 bits;
 // ------------------------------ PROTÓTIPOS -------------------------------
 
 // MENU / CONTROLE DO SISTEMA
-/* void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
-          estatInstrucoes *estatInst, regEstado *estado);*/
-void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
-            estatInstrucoes *estatInst, regEstado *estado);
+void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado);
+void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado);
 void imprimeEstatistica(estatInstrucoes estatInst);
 void salvaASM(MemoriaUnificada *memoria, int qntdInst);
 void salvaDAT(int *memDados);
@@ -112,6 +116,7 @@ void salvaDAT(int *memDados);
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada);
 void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor);
 int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
+void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria);
 
 // void contaLinhas(char *arq, int *qtInst, int *qtDados);
 
@@ -121,10 +126,9 @@ void imprimeInstrucao(MemoriaUnificada *memoria, int pc);
 
 // PROGRAM COUNTER (PC) / BUSCA
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado);
-void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero); // Mudar nome para algo coerente
-
+void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado);
 // DECODIFICAÇÃO
-void decodificaInstrucao(regEstado *estado, int *bReg);   // multiciclo
+void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instrucao);   // multiciclo
 void decodificaInst(MemoriaUnificada *instrucao);                // utilitário (ASM)
 
 // UNIDADE DE CONTROLE (UC)
@@ -137,9 +141,9 @@ void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
 // EXECUÇÃO
-int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg);
+int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
 int8_t extensorBit(int8_t imm);
-
+void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
 int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
 
