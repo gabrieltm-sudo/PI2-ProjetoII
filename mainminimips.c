@@ -41,9 +41,9 @@ int main(){
 
         switch (opcao) {
             case 1:
-                //Carregar Mem de Instr.
+                //Carregar Memórias
                 char arq[20];
-                printf("\nDigite o nome do arquivo da memória de instruções (.mem): ");
+                printf("\nDigite o nome do arquivo da memória (.mem): ");
 
                 fgets(arq, sizeof(arq), stdin);
                 arq[strcspn(arq, "\n")] = '\0';
