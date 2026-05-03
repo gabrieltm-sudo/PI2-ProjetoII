@@ -10,39 +10,6 @@ FILE *arquivoMemDados = NULL;
 
 //---------------------------------------LEITURA E INICIALIZAÇÃO------------------------------------------------
 
-/*void contaLinhas(char *arq, int *qtInst, int *qtDados){
-
-    FILE *arquivo = fopen(arq, "r");
-    if (arquivo == NULL) {
-        printf("\nErro ao abrir arquivo .mem!\n");
-        return;
-    }
-
-    char leitura[64];
-    int lerDados = 0;
-
-    *qtInst = 0;
-    *qtDados = 0;
-
-    while(fgets(leitura, sizeof(leitura), arquivo)){
-
-        leitura[strcspn(leitura, "\n")] = '\0';
-
-        if(strcmp(leitura, ".data") == 0){
-            lerDados = 1;
-            continue;
-        }
-
-        if(lerDados == 0){
-            (*qtInst)++;
-        }else{
-            (*qtDados)++;
-        }
-    }
-
-    fclose(arquivo);
-}*/
-
 // Leitura da memória
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada) {
 
@@ -143,15 +110,20 @@ void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
     printf("\n[Busca] PC=%d, IR=%04x\n", *pc, estado->IR);
 }
 
-void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) {
+
+//------------------------------------------Decodificação-------------------------------------------------
+
+// Isso não acontece nesse momento. As etapas envolviam: 
+// Busca da instrução - Armazenar no IR a instrução que o PC está apontando e fazer PC+1 - OK.
+// Decodificação & leitura dos registradores RS e Rt & cálculo do endereço de desvio e Armazena em A e B Rs e Rt, respectivamente, armazena no UlaSaida o cálculo de PC + imediato
+
+/* void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) { // MUDAR NOME - ProgramCounter não faz sentido.
     if (instrucao->opcode == 8 && zero) { // BEQ
-        *pc = estado->ULASaida;
+        *pc = estado->ULASaida; 
     } else if (instrucao->opcode == 2) { // JUMP
         *pc = estado->IR & 0xFF; // 8 bits menos significativos
     }
-}
-
-//------------------------------------------Decodificação (ID)-------------------------------------------------
+}*/
 
 // Decodifica a instrução guardada no IR e carrega registradores
 void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instrucao) {
@@ -168,7 +140,9 @@ void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instruc
     estado->B = bReg[instrucao->rt];
 
     int8_t imm_signed = (instrucao->imm & 0x20) ? (instrucao->imm | 0xC0) : instrucao->imm;
-    estado->ULASaida = (estado->estadoEtapa) + imm_signed;
+
+    // chamar a ULA ao invés de fazer cálculo direto - Outra coisa, por favor fazer isso em uma função que não seja a decodificação da instrução para podermos utilizar apenas para isso a função, se possível
+    estado->ULASaida = (estado->estadoAtual) + imm_signed;
 }
 
 //Decodifica Instrução pro salvaASM
@@ -242,10 +216,7 @@ void decodifica(MemoriaUnificada *instrucao){
 
 int8_t extensorBit(int8_t imm){
     imm = imm<<2;
-    //printf("\n%d", imm);      // 111111 = -1  <- 00111111 << 2 -> 111111100 >> 2 -> 11111111
-
     imm = imm>>2;
-    //printf("\n%d", imm);
 
     return imm;
 }
@@ -257,7 +228,8 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
     // Zera sinais
     *sinais = (sinaisUC){0};
 
-    switch(estado->estadoEtapa) {
+// Devo ver se realmente preciso dar igual zero nos sinais zerados pois eles são zerados acima - Gabriel
+    switch(estado->estadoAtual) { 
         case 0: //  Estado 0 - Busca
             sinais->LerMem = 1;
             sinais->IouD = 0;
@@ -265,59 +237,90 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
 
             // Calcula PC + 1
             sinais->UlaFonteB = 1; // 01 (Usa constante 1)
-            sinais->ControleUla = 0;
+            sinais->UlaFonteA = 0; // PC vai para a ULA
+            sinais->ControleUla = 0; // ULA faz soma
             sinais->PCEsc = 1;  // Atualiza PC
             sinais->PCFonte = 0; // PC vem da saída da ULA
 
+            sinais->IouD = 0; // Memória acessa valor apontado pelo PC
+            sinais->RegDst = 1; // ? Acredito ser don't care pois o regEsc é zero nesse momento
 
             break;
         case 1: // Estado 1 - Decodificação
             sinais->PCEsc = 0;
 
+            sinais->RegDst = 1;
             // BEQ
-            sinais->UlaFonteB = 3; // 11 - Imm extendido
-            sinais->ControleUla = 1; //(?) Soma
-            
+            sinais->UlaFonteA = 0; // PC vai para a ULA
+            sinais->UlaFonteB = 2; // 10 - Imm extendido
+            sinais->ControleUla = 0; // ULA faz soma pois calcula PC + imm extendido para o BEQ
 
             break;
-        case 2: // 2º Estado - Execução tipo I
-            
+        case 2: // 2º Estado - Execução tipo I - cálculo do endereço base+deslocamento ou rs + imm
+            sinais->UlaFonteA = 1; // rs
+            sinais->UlaFonteB = 2; // 10 - Imm extendido
+            sinais->ControleUla = 0; // Faz soma
 
             break;
         case 3: // 3º Estado - Acesso à memória (LW)
-            
+            sinais->IouD = 1; // Acessa memória de dados
+            sinais->EscMem = 0; // Não escreve na memória
+            sinais->UlaFonteB = 2; // 10
+            sinais->UlaFonteA = 1;
 
             break;
         case 4: // 4º Estado - Finalização LW
-
-
+            sinais->IouD = 1;
+            sinais->MemParaReg = 1;
+            sinais->EscReg = 1;
+            sinais->UlaFonteB = 2;
+            sinais->UlaFonteA = 1;
+            
             break;
         case 5: // 5º Estado - Acesso à memória (SW)
-
-
+            sinais->IouD = 1;
+            sinais->EscMem = 1;
+            sinais->UlaFonteB = 2;
+            sinais->UlaFonteA = 1;
+            
             break;
         case 6: // 6º Estado - addi
-
+            sinais->EscReg = 1;
+            sinais->UlaFonteB = 2;
+            sinais->UlaFonteA = 1;
+            sinais->ControleUla = 0; // Ula faz soma
 
             break;
         case 7: // 7º Estado - Execução tipo R
-
-
+            sinais->RegDst = 1;
+            sinais->UlaFonteA = 1;
+            sinais->UlaFonteB = 0; 
+            sinais->ControleUla = 3; // 011 - Faz operação de acordo com funct da instrução
+            
             break;
         case 8: // 8º Estado - Término da tipo R
-
+            sinais->RegDst = 1;
+            sinais->EscReg = 1;
+            sinais->MemParaReg = 0;
 
             break;
         case 9: // 9º Estado - Término BEQ
-
+            sinais->PCFonte = 1; // PC recebe o endereço calculado no estado 1
+            sinais->branch = 1;
+            sinais->UlaFonteA = 1;
+            sinais->UlaFonteB = 0;
+            sinais->ControleUla = 2; // 010 - ULA faz subtração
 
             break;
         case 10: // 10º Estado - Jump
-        
+            sinais->PCEsc = 1;
+            sinais->UlaFonteA = 0;
+            sinais->PCFonte = 2; // 10 - Imediato vai para o PC
+            
         break;
     }
 
-    estado->estadoEtapa = defineEstado(estado->estadoEtapa, opcode);
+    estado->proximoEstado = defineEstado(estado->estadoAtual, opcode);
 }
 
 int defineEstado(int estadoAtual, uint8_t opcode){
@@ -426,7 +429,8 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
     return resultado;
 }
 
-void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado) {
+// Não implementada ainda. Se quiser, pode apagar
+/* void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado) {
     if (instrucao->opcode == 0) { // Tipo R
         bReg[instrucao->rd] = estado->ULASaida;
     } else if (instrucao->opcode == 4) { // addi
@@ -434,33 +438,7 @@ void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEsta
     } else if (instrucao->opcode == 11) { // LW
         bReg[instrucao->rt] = estado->MDR;
     }
-}
-
-/*
-int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado) {
-    int zero = 0;
-    switch(instrucao->opcode) {
-        case 0: // Tipo R
-            switch(instrucao->funct) {
-                case 0: estado->ULASaida = estado->A + estado->B; break;
-                case 2: estado->ULASaida = estado->A - estado->B; break;
-                case 4: estado->ULASaida = estado->A & estado->B; break;
-                case 5: estado->ULASaida = estado->A | estado->B; break;
-            }
-            break;
-        case 4: // addi
-            estado->ULASaida = estado->A + instrucao->imm;
-            break;
-        case 8: // beq
-            zero = (estado->A == estado->B);
-            break;
-        case 11: // lw
-        case 15: // sw
-            estado->ULASaida = estado->A + instrucao->imm;
-            break;
-    }
-    return zero;
-}
+}*/
 
 //-------------------------------------------Controle de fluxo-------------------------------------------------
 
@@ -473,117 +451,26 @@ void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatI
     printf("\nFim das instruções!\n");
 }
 
-// Lógica errada - está executando um monociclo. Cada step deve executar um ciclo. (Comecei mais ou menos ali para ter uma ideia de como deve rodar a partir do estado sempre)
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
+    int zero = 0;
 
     if (*pc >= 256 || memoria[*pc].memoria == 0) {
         printf("\nFim das instruções!\n");
         return;
     }
-
-    printf("\nPC = %d | Memória = %s\n", *pc, memoria[*pc].mem);
-
     
-    switch (*(estado->estadoEtapa)) {
-        case 0: // IF
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 0, sinais);
-            buscaInstrucao(memoria, pc, estado);
+    printf("\n[ Estado atual: %d ]\n", estado->estadoAtual);
+    printf("\nPC = %d\n", *pc);
+    imprimeInstrucao(memoria, *pc);
 
-            *(estado->estadoEtapa) = 1;
 
-            break;
+        
+    unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, estado, sinais);
+    executaCiclo(memoria, sinais, bReg, estado, &zero, pc);
 
-        case 1: // ID
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 1, sinais);
-            decodificaInstrucao(estado, bReg, &memoria[*pc]);
-
-            // Decide próximo estado conforme opcode
-            switch (memoria[*pc].opcode) {
-                case 0:  *(estado->estadoEtapa) = 7; break; // Tipo R
-                case 4:  *(estado->estadoEtapa) = 2; break; // addi
-                case 8:  *(estado->estadoEtapa) = 9; break; // beq
-                case 11: *(estado->estadoEtapa) = 2; break; // lw
-                case 15: *(estado->estadoEtapa) = 2; break; // sw
-                case 2:  *(estado->estadoEtapa) = 10; break; // jump
-            }
-            break;
-
-        case 2: // EX tipo I (lw/sw/addi)
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-            executaInstrucao(&memoria[*pc], sinais, bReg, estado);
-            if (memoria[*pc].opcode == 11) *(estado->estadoEtapa) = 3; // lw → MEM
-            else if (memoria[*pc].opcode == 15) *(estado->estadoEtapa) = 5; // sw → MEM
-            else if (memoria[*pc].opcode == 4) *(estado->estadoEtapa) = 6; // addi → WB
-            break;
-
-        case 3: // MEM lw
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
-            acessoMemoria(&memoria[*pc], sinais, bReg, estado, memoria);
-            *(estado->estadoEtapa) = 4; // próximo é WB
-            break;
-
-        case 4: // WB lw
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
-            writeBack(&memoria[*pc], sinais, bReg, estado);
-            *(estado->estadoEtapa) = 0; // volta para busca
-            (*estatInst).lw++;
-            (*estatInst).total++;
-            break;
-
-        case 5: // MEM sw
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 3, sinais);
-            acessoMemoria(&memoria[*pc], sinais, bReg, estado, memoria);
-            *(estado->estadoEtapa) = 0; // termina
-            (*estatInst).sw++;
-            (*estatInst).total++;
-            break;
-
-        case 6: // WB addi
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
-            writeBack(&memoria[*pc], sinais, bReg, estado);
-            *(estado->estadoEtapa) = 0;
-            (*estatInst).addi++;
-            (*estatInst).total++;
-            break;
-
-        case 7: // EX tipo R
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-            executaInstrucao(&memoria[*pc], sinais, bReg, estado);
-            *(estado->estadoEtapa) = 8;
-            break;
-
-        case 8: // WB tipo R
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 4, sinais);
-            writeBack(&memoria[*pc], sinais, bReg, estado);
-            *(estado->estadoEtapa) = 0;
-            (*estatInst).tipoR++;
-            (*estatInst).total++;
-            break;
-
-        case 9: // EX beq
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-            int zero = executaInstrucao(&memoria[*pc], sinais, bReg, estado);
-            programCounter(pc, sinais, &memoria[*pc], zero, estado);
-            *(estado->estadoEtapa) = 0;
-            (*estatInst).beq++;
-            (*estatInst).total++;
-            break;
-
-        case 10: // EX jump
-            unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, 2, sinais);
-            programCounter(pc, sinais, &memoria[*pc], 0, estado);
-            *(estado->estadoEtapa) = 0;
-            (*estatInst).j++;
-            (*estatInst).total++;
-            break;
-    }
-}
-
-/*   Parte abaixo ok
-decodificaInstrucao(estado, bReg);
-
-// Contabiliza estatísticas
-memoria[*pc].decodificado = 1;
+    memoria[*pc].decodificado = 1;
+    
+    // Contabiliza estatísticas
     switch(memoria[*pc].tipoInst){
         case tipoI:
             switch(memoria[*pc].opcode){
@@ -610,8 +497,78 @@ memoria[*pc].decodificado = 1;
     }
 
     (*estatInst).total++;
+    estado->estadoAtual = estado->proximoEstado;
 }
-*/
+
+void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg, regEstado *estado, int *zero, int *pc) {
+    int op1, op2, novoPc, overflow;
+    
+    // MUXs do UlaFonte e PCFonte
+    if(sinais->UlaFonteA == 0)
+        op1 = *pc;
+    else if(sinais->UlaFonteA == 1)
+        op1 = estado->A;
+ 
+    if(sinais->UlaFonteB == 0)
+        op2 = estado->B;
+    else if(sinais->UlaFonteB == 1)
+        op2 = 1;
+    else if(sinais->UlaFonteB == 2)
+        op2 = memoria[*pc].imm;
+    
+    if(sinais->PCFonte == 0)
+        novoPc = estado->ULASaida;
+    else if(sinais->PCFonte == 1)
+        novoPc = memoria[*pc].imm;
+        
+    // Se estado x, faz...
+    switch(estado->estadoAtual){
+        case 0: // Busca
+            buscaInstrucao(memoria, pc, estado);
+        
+            break;
+        case 1: // Decodificação (Não apenas da instrução)
+            decodificaInstrucao(estado, bReg, memoria);
+            break;
+        case 2: // Execução tipo I
+            estado->ULASaida = ULA(op1, op2, sinais->ControleUla, zero, &overflow); // sinais->ControleUla são os sinais que enviará para o controle da Ula.
+
+            break;
+        case 3: // Execução LW - parte da finalização do SW, addi e tipo R
+
+            break;
+        case 4: // Finalização LW
+
+            break;
+        case 5: // Finalização SW
+            
+            break;
+        case 6: // Finalização SW
+
+            break;
+        case 7: // Execução tipo R
+            estado->ULASaida = ULA(op1, op2, sinais->ControleUla, zero, &overflow);
+        
+            break;
+        case 8: // Finalização tipo R
+
+            break;
+        case 9: // BEQ
+
+            if(sinais->branch == 1 && *zero == 1){
+                *pc = novoPc;
+            }
+        
+            break;
+        case 10:
+            if(sinais->PCEsc==1){
+                *pc = novoPc;
+            }
+            break;
+    }
+
+    printf("\n[ Próximo estado: %d ]\n", estado->proximoEstado);
+}
 
 //-----------------------------------------------Impressões----------------------------------------------------
 

@@ -20,7 +20,8 @@ typedef struct{
     int8_t A;
     int8_t B;
     int8_t ULASaida;
-    int estadoEtapa;   // Estado/Ciclo da Instrução Atual
+    int proximoEstado;
+    int estadoAtual;   // Estado/Ciclo da Instrução Atual
 }regEstado;
 
 // struct das estatísticas
@@ -141,7 +142,7 @@ void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
 // EXECUÇÃO
-int executaInstrucao(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
+void executaCiclo(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, int *zero, int *pc);
 int8_t extensorBit(int8_t imm);
 void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
