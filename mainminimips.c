@@ -7,10 +7,16 @@
 int main(){
 
     int opcao, pc = 0, qntdInst = 0;
+
     estatInstrucoes estatInst = {0};
-    regEstado estado;
+    
+    regEstado regEstado;
     sinaisUC sinais;
+
     MemoriaUnificada memoria[TAM_MEMORIA] = {0};
+
+    //historico hist;
+    //hist.topo = 0;
 
     int *bReg = inicializaBReg();
 
@@ -58,7 +64,7 @@ int main(){
             */
             case 3:
                 // Imprimir memórias (tanto instruções quanto dados)
-                imprimeMemorias(memoria, &estado, bReg);
+                imprimeMemorias(memoria);
 
                 break;
 
@@ -78,7 +84,7 @@ int main(){
                             imprimeBancoRegistradores(bReg);
                             break;
                         case 2:
-                            imprimeMemorias(memoria, &estado, bReg);
+                            imprimeMemorias(memoria);
                             break;
                         case 3:
                             imprimeEstatistica(estatInst);
@@ -93,7 +99,7 @@ int main(){
 
             case 6:
                 // Salvar .asm
-                salvaASM(memoria, qntdInst, &estado, bReg);
+                salvaASM(memoria, qntdInst);
                 break;
 
             case 7:
@@ -103,13 +109,13 @@ int main(){
 
             case 8:
                 // salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                run(memoria, bReg, &sinais, &pc, &estatInst, &estado);
+                run(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
                 break;
 
             case 9:
                 //Executa instrução (step)
                 // salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                step(memoria, bReg, &sinais, &pc, &estatInst, &estado);
+                step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
                 break;
 
             case 10:

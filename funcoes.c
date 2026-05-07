@@ -104,10 +104,8 @@ void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, reg
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
     // Carrega instrução no IR
     estado->IR = memoria[*pc].memoria;
-    // Incrementa PC
-    (*pc)++;
 
-    printf("\n==========Busca==========\n\nPróximo PC=%d, IR=%16s\n", *pc, memoria[*pc-1].mem);
+    printf("\n==========Busca==========\n\nPróximo PC=%d, IR=%16s\n", *pc, memoria[*pc].mem);
 }
 
 
@@ -244,7 +242,7 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
             sinais->RegDst = 1;
             sinais->UlaFonteA = 1;
             sinais->UlaFonteB = 0;
-            sinais->ControleUla = 3; // 011 - Faz operação de acordo com funct da instrução
+            sinais->ControleUla = 2; // 011 - Faz operação de acordo com funct da instrução
 
             break;
         case 8: // 8º Estado - Término da tipo R
@@ -258,7 +256,7 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
             sinais->branch = 1;
             sinais->UlaFonteA = 1;
             sinais->UlaFonteB = 0;
-            sinais->ControleUla = 2; // 010 - ULA faz subtração
+            sinais->ControleUla = 1; // 010 - ULA faz subtração
 
             break;
         case 10: // 10º Estado - Jump
@@ -325,12 +323,12 @@ void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg){
     }
 }
 
-int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
+int8_t ULA(int op1, int op2, int ControleUla, int *zero, int *overflow){
     int resultado = 0;
     *overflow = 0;
     int8_t res_8bit;
 
-    switch(ulaOp){
+    switch(ControleUla){
         case 0: // ADD, LW/SW , ADDI
             resultado = op1 + op2;
 
@@ -376,6 +374,39 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
     }
 
     return resultado;
+}
+
+int ULAcontrole(int ControleUla, int funct){
+
+    switch(ControleUla){
+        case 0:
+            return 0; // ADD, LW/SW , ADDI
+
+        case 1:
+            return 2;  // SUB, BEQ
+        
+        case 2: // utiliza e respeita o funct
+            switch(funct){
+                case 0:
+                    return 0; //ADD
+                
+                case 2:
+                    return 2; //SUB
+                
+                case 4:
+                    return 4; //AND
+
+                case 5:
+                    return 5; //OR
+
+                default:
+                    printf("\nFunct inválido!\n");
+                    exit(1);
+            }
+            default:
+                printf("\nALUop inválido!\n");
+                exit(1);
+    }
 }
 
 //-------------------------------------------Controle de fluxo-------------------------------------------------
@@ -445,7 +476,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
 
 void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,
                   regEstado *estado, int *zero, int *pc) {
-    int op1, op2, novoPc, overflow;
+    int op1, op2, novoPc, overflow, operacaoULA;
 
     // MUXs do UlaFonte e PCFonte
     if(sinais->UlaFonteA == 0)
@@ -462,26 +493,35 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,
 
     if(sinais->PCFonte == 0)
         novoPc = estado->ULASaida;
-    else if(sinais->PCFonte == 1)
-        novoPc = memoria[*pc - 1].imm;
+    else if(sinais->PCFonte == 2)
+        novoPc = estado->addr;
 
     switch(estado->estadoAtual){
         case 0: // Busca
             buscaInstrucao(memoria, pc, estado);
+            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            if(sinais->PCEsc){
+                *pc = estado->ULASaida;
+            }
             break;
         case 1: // Decodificação
             decodificaInstrucao(*pc - 1, estado, bReg);
             break;
         case 2: // Execução tipo I
-            estado->ULASaida = ULA(op1, op2, sinais->ControleUla, zero, &overflow);
+            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
             break;
         case 7: // Execução tipo R
-            estado->ULASaida = ULA(op1, op2, sinais->ControleUla, zero, &overflow);
+            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
             break;
         case 9: // BEQ
+            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
             if(sinais->branch == 1 && *zero == 1){
-                *pc = novoPc;
-            }
+            *pc = estado->ULASaida;
+            }       
             break;
         case 10: // Jump
             if(sinais->PCEsc == 1){
