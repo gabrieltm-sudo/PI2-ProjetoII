@@ -408,6 +408,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     // Imprime usando a assinatura correta
     if(estado->estadoAtual==1){
         imprimeInstrucao(memoria, *pc - 1, estado, bReg);
+        printf("\n");
     }
 
     memoria[*pc - 1].decodificado = 1;
@@ -532,33 +533,33 @@ void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado, int 
     switch(estado->opcode){
         case 0: // Tipo R
             if(estado->funct==0)
-                printf("add $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
+                printf("add $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
             else if(estado->funct==2)
-                printf("sub $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
+                printf("sub $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
             else if(estado->funct==4)
-                printf("and $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
+                printf("and $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
             else if(estado->funct==5)
-                printf("or $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
+                printf("or $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
             break;
 
         case 2: // Jump
-            printf("j %d\n", estado->addr);
+            printf("j %d", estado->addr);
             break;
 
         case 4: // Addi
-            printf("addi $%d, $%d, %d\n", estado->rt, estado->rs, estado->imm);
+            printf("addi $%d, $%d, %d", estado->rt, estado->rs, estado->imm);
             break;
 
         case 8: // BEQ
-            printf("beq $%d, $%d, %d\n", estado->rs, estado->rt, estado->imm);
+            printf("beq $%d, $%d, %d", estado->rs, estado->rt, estado->imm);
             break;
 
         case 11: // LW
-            printf("lw $%d, %d($%d)\n", estado->rt, estado->imm, estado->rs);
+            printf("lw $%d, %d($%d)", estado->rt, estado->imm, estado->rs);
             break;
 
         case 15: // SW
-            printf("sw $%d, %d($%d)\n", estado->rt, estado->imm, estado->rs);
+            printf("sw $%d, %d($%d)", estado->rt, estado->imm, estado->rs);
             break;
     }
 }
