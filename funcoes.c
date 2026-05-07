@@ -92,7 +92,7 @@ int8_t retornaMemoria(int *memDados, uint8_t enderecoULA) {
 
 void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria) {
     if (instrucao->opcode == 11) { // LW
-        estado->MDR = memoria[estado->ULASaida].memoria;
+        estado->MDR = memoria[estado->ULASaida].dado;
     } else if (instrucao->opcode == 15) { // SW
         memoria[estado->ULASaida].memoria = estado->B;
     }
@@ -489,7 +489,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,
     else if(sinais->UlaFonteB == 1)
         op2 = 1;
     else if(sinais->UlaFonteB == 2)
-        op2 = memoria[*pc - 1].imm; // usa instrução já buscada
+        op2 = estado->imm; // usa instrução já buscada
 
     if(sinais->PCFonte == 0)
         novoPc = estado->ULASaida;
@@ -511,6 +511,14 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,
         case 2: // Execução tipo I
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            break;
+        case 3: // LW - leitura memória
+            acessoMemoria(&memoria[*pc - 1], sinais, bReg, estado, memoria);
+            break;
+        case 4: // LW - write back
+            if(sinais->EscReg){
+                bReg[estado->rt] = estado->MDR;
+            }
             break;
         case 7: // Execução tipo R
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
