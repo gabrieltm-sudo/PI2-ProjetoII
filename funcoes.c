@@ -112,105 +112,47 @@ void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
 
 
 //------------------------------------------Decodificação-------------------------------------------------
-
-// Isso não acontece nesse momento. As etapas envolviam: 
-// Busca da instrução - Armazenar no IR a instrução que o PC está apontando e fazer PC+1 - OK.
-// Decodificação & leitura dos registradores RS e Rt & cálculo do endereço de desvio e Armazena em A e B Rs e Rt, respectivamente, armazena no UlaSaida o cálculo de PC + imediato
-
-/* void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) { // MUDAR NOME - ProgramCounter não faz sentido.
+ void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) { // MUDAR NOME - ProgramCounter não faz sentido.
     if (instrucao->opcode == 8 && zero) { // BEQ
-        *pc = estado->ULASaida; 
+        *pc = estado->ULASaida;
     } else if (instrucao->opcode == 2) { // JUMP
         *pc = estado->IR & 0xFF; // 8 bits menos significativos
     }
-}*/
+}
 
 // Decodifica a instrução guardada no IR e carrega registradores
-void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instrucao) {
+void decodificaInstrucao(int pc, regEstado *estado, int *bReg){
     uint16_t instr = estado->IR;
 
-    instrucao->opcode = (instr >> 12) & 0xF;
-    instrucao->rs     = (instr >> 9) & 0x7;
-    instrucao->rt     = (instr >> 6) & 0x7;
-    instrucao->rd     = (instr >> 3) & 0x7;
-    instrucao->funct  = instr & 0x7;
-    instrucao->imm    = instr & 0x3F;
+    estado->opcode = instr >> 12;
 
-    estado->A = bReg[instrucao->rs];
-    estado->B = bReg[instrucao->rt];
+    switch(estado->opcode){
+        case 0: // Tipo R
+            estado->tipoInst = tipoR;
+            estado->rs = (instr >> 9) & 0x7;
+            estado->rt = (instr >> 6) & 0x7;
+            estado->rd = (instr >> 3) & 0x7;
+            estado->funct = instr & 0x7;
+            break;
 
-    int8_t imm_signed = (instrucao->imm & 0x20) ? (instrucao->imm | 0xC0) : instrucao->imm;
+        case 2: // Tipo J
+            estado->tipoInst = tipoJ;
+            estado->addr = instr & 0xFF;
+            break;
 
-    // chamar a ULA ao invés de fazer cálculo direto - Outra coisa, por favor fazer isso em uma função que não seja a decodificação da instrução para podermos utilizar apenas para isso a função, se possível
-    estado->ULASaida = (estado->estadoAtual) + imm_signed;
-}
-
-//Decodifica Instrução pro salvaASM
-void decodificaInst(MemoriaUnificada *instrucao){
-
-    (*instrucao).opcode = (*instrucao).memoria  >> 12; // Pega os 4 bits do opcode
-
-    switch((*instrucao).opcode){
-    case 0:
-        (*instrucao).tipoInst = tipoR;
-        (*instrucao).rs = ((*instrucao).memoria  >> 9) & 0x7; // pega os 3 bits do rs (desloca 6 bits para a direita e pega os 3 mais significativos que ficaram)
-        (*instrucao).rt = ((*instrucao).memoria  >> 6) & 0x7; // pega os 3 bits do rt
-        (*instrucao).rd = ((*instrucao).memoria  >> 3) & 0x7; // pega os 3 bits do rd
-        (*instrucao).funct = ((*instrucao).memoria ) & 0x7;
-        printf("\n[ Tipo Rzz ] \n");
-        printf("opcode: %d\n", (*instrucao).opcode);
-        printf("rs: %d\n", (*instrucao).rs);
-        printf("rt: %d\n", (*instrucao).rt);
-        printf("rd: %d\n", (*instrucao).rd);
-        printf("funct: %d\n", (*instrucao).funct);
-        break;
-
-    case 2:
-        (*instrucao).tipoInst = tipoJ;
-        (*instrucao).addr = ((*instrucao).memoria ) &0xFF; // pega os 8 bits do adress
-        printf("\n[ Tipo J ]\n");
-        printf("opcode: %d\n", (*instrucao).opcode);
-        printf("address: %d\n", (*instrucao).addr);
-        break;
-
-    default:
-        (*instrucao).tipoInst = tipoI;
-        (*instrucao).rs = ((*instrucao).memoria  >> 9) &0x7; // pega os 3 bits do rs
-        (*instrucao).rt = ((*instrucao).memoria  >> 6) &0x7; // pega os 3 bits do rt
-        (*instrucao).imm = ((*instrucao).memoria ) &0x3F; // pega os 6 bits do imediato (deve passar por um extensor antes da ULA)
-        (*instrucao).imm = extensorBit((*instrucao).imm);
-        printf("\n[ Tipo I ] \n");
-        printf("opcode: %d\n", (*instrucao).opcode);
-        printf("rs: %d\n", (*instrucao).rs);
-        printf("rt: %d\n", (*instrucao).rt);
-        printf("imediato: %d\n", (*instrucao).imm);
+        default: // Tipo I
+            estado->tipoInst = tipoI;
+            estado->rs = (instr >> 9) & 0x7;
+            estado->rt = (instr >> 6) & 0x7;
+            estado->imm = instr & 0x3F;
+            estado->imm = extensorBit(estado->imm);
+            estado->ULASaida = pc + estado->imm + 1;
+            break;
     }
-}
 
-void decodifica(MemoriaUnificada *instrucao){
-
-    (*instrucao).opcode = (*instrucao).memoria  >> 12; // Pega os 4 bits do opcode
-
-    switch((*instrucao).opcode){
-    case 0:
-        (*instrucao).tipoInst = tipoR;
-        (*instrucao).rs = ((*instrucao).memoria  >> 9) & 0x7; // pega os 3 bits do rs (desloca 6 bits para a direita e pega os 3 mais significativos que ficaram)
-        (*instrucao).rt = ((*instrucao).memoria  >> 6) & 0x7; // pega os 3 bits do rt
-        (*instrucao).rd = ((*instrucao).memoria  >> 3) & 0x7; // pega os 3 bits do rd
-        (*instrucao).funct = ((*instrucao).memoria ) & 0x7;
-        break;
-
-    case 2:
-        (*instrucao).tipoInst = tipoJ;
-        (*instrucao).addr = ((*instrucao).memoria ) &0xFF; // pega os 8 bits do adress
-        break;
-
-    default:
-        (*instrucao).tipoInst = tipoI;
-        (*instrucao).rs = ((*instrucao).memoria  >> 9) &0x7; // pega os 3 bits do rs
-        (*instrucao).rt = ((*instrucao).memoria  >> 6) &0x7; // pega os 3 bits do rt
-        (*instrucao).imm = ((*instrucao).memoria ) &0x3F; // pega os 6 bits do imediato (deve passar por um extensor antes da ULA)
-        (*instrucao).imm = extensorBit((*instrucao).imm);
+    if(estado->tipoInst != tipoJ){
+        estado->A = bReg[estado->rs];
+        estado->B = bReg[estado->rt];
     }
 }
 
@@ -221,7 +163,6 @@ int8_t extensorBit(int8_t imm){
     return imm;
 }
 
-
 //---------------------------------------Unidade de Controle (UC)----------------------------------------------
 
 void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais) {
@@ -229,7 +170,7 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
     *sinais = (sinaisUC){0};
 
 // Devo ver se realmente preciso dar igual zero nos sinais zerados pois eles são zerados acima - Gabriel
-    switch(estado->estadoAtual) { 
+    switch(estado->estadoAtual) {
         case 0: //  Estado 0 - Busca
             sinais->LerMem = 1;
             sinais->IouD = 0;
@@ -275,14 +216,14 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
             sinais->EscReg = 1;
             sinais->UlaFonteB = 2;
             sinais->UlaFonteA = 1;
-            
+
             break;
         case 5: // 5º Estado - Acesso à memória (SW)
             sinais->IouD = 1;
             sinais->EscMem = 1;
             sinais->UlaFonteB = 2;
             sinais->UlaFonteA = 1;
-            
+
             break;
         case 6: // 6º Estado - addi
             sinais->EscReg = 1;
@@ -294,9 +235,9 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
         case 7: // 7º Estado - Execução tipo R
             sinais->RegDst = 1;
             sinais->UlaFonteA = 1;
-            sinais->UlaFonteB = 0; 
+            sinais->UlaFonteB = 0;
             sinais->ControleUla = 3; // 011 - Faz operação de acordo com funct da instrução
-            
+
             break;
         case 8: // 8º Estado - Término da tipo R
             sinais->RegDst = 1;
@@ -316,7 +257,7 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
             sinais->PCEsc = 1;
             sinais->UlaFonteA = 0;
             sinais->PCFonte = 2; // 10 - Imediato vai para o PC
-            
+
         break;
     }
 
@@ -429,17 +370,6 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow){
     return resultado;
 }
 
-// Não implementada ainda. Se quiser, pode apagar
-/* void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado) {
-    if (instrucao->opcode == 0) { // Tipo R
-        bReg[instrucao->rd] = estado->ULASaida;
-    } else if (instrucao->opcode == 4) { // addi
-        bReg[instrucao->rt] = estado->ULASaida;
-    } else if (instrucao->opcode == 11) { // LW
-        bReg[instrucao->rt] = estado->MDR;
-    }
-}*/
-
 //-------------------------------------------Controle de fluxo-------------------------------------------------
 
 void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
@@ -451,117 +381,102 @@ void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatI
     printf("\nFim das instruções!\n");
 }
 
-void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
+void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
+          estatInstrucoes *estatInst, regEstado *estado) {
     int zero = 0;
 
     if (*pc >= 256 || memoria[*pc].memoria == 0) {
         printf("\nFim das instruções!\n");
         return;
     }
-    
+
     printf("\n[ Estado atual: %d ]\n", estado->estadoAtual);
     printf("\nPC = %d\n", *pc);
-    imprimeInstrucao(memoria, *pc);
 
-
-        
+    // Controle e execução do ciclo
     unidadeControleMulti(memoria[*pc].opcode, memoria[*pc].funct, estado, sinais);
     executaCiclo(memoria, sinais, bReg, estado, &zero, pc);
 
-    memoria[*pc].decodificado = 1;
-    
-    // Contabiliza estatísticas
-    switch(memoria[*pc].tipoInst){
+    // Decodifica a instrução que está no IR
+    decodificaInstrucao(*pc - 1, estado, bReg);
+
+    // Imprime usando a assinatura correta
+    imprimeInstrucao(memoria, *pc - 1, estado, bReg);
+
+    memoria[*pc - 1].decodificado = 1;
+
+    // Estatísticas
+    switch(estado->tipoInst){
         case tipoI:
-            switch(memoria[*pc].opcode){
-                case 4: (*estatInst).addi++; break;
-                case 8: (*estatInst).beq++; break;
-                case 11: (*estatInst).lw++; break;
-                case 15: (*estatInst).sw++; break;
+            switch(estado->opcode){
+                case 4: estatInst->addi++; break;
+                case 8: estatInst->beq++; break;
+                case 11: estatInst->lw++; break;
+                case 15: estatInst->sw++; break;
             }
-            (*estatInst).tipoI++;
+            estatInst->tipoI++;
             break;
         case tipoJ:
-            (*estatInst).j++;
-            (*estatInst).tipoJ++;
+            estatInst->j++;
+            estatInst->tipoJ++;
             break;
         case tipoR:
-            switch(memoria[*pc].funct){
-                case 0: (*estatInst).add++; break;
-                case 2: (*estatInst).sub++; break;
-                case 4: (*estatInst).and++; break;
-                case 5: (*estatInst).or++; break;
+            switch(estado->funct){
+                case 0: estatInst->add++; break;
+                case 2: estatInst->sub++; break;
+                case 4: estatInst->and++; break;
+                case 5: estatInst->or++; break;
             }
-            (*estatInst).tipoR++;
+            estatInst->tipoR++;
             break;
     }
 
-    (*estatInst).total++;
+    estatInst->total++;
     estado->estadoAtual = estado->proximoEstado;
 }
 
-void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg, regEstado *estado, int *zero, int *pc) {
+void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,
+                  regEstado *estado, int *zero, int *pc) {
     int op1, op2, novoPc, overflow;
-    
+
     // MUXs do UlaFonte e PCFonte
     if(sinais->UlaFonteA == 0)
         op1 = *pc;
     else if(sinais->UlaFonteA == 1)
         op1 = estado->A;
- 
+
     if(sinais->UlaFonteB == 0)
         op2 = estado->B;
     else if(sinais->UlaFonteB == 1)
         op2 = 1;
     else if(sinais->UlaFonteB == 2)
-        op2 = memoria[*pc].imm;
-    
+        op2 = memoria[*pc - 1].imm; // usa instrução já buscada
+
     if(sinais->PCFonte == 0)
         novoPc = estado->ULASaida;
     else if(sinais->PCFonte == 1)
-        novoPc = memoria[*pc].imm;
-        
-    // Se estado x, faz...
+        novoPc = memoria[*pc - 1].imm;
+
     switch(estado->estadoAtual){
         case 0: // Busca
             buscaInstrucao(memoria, pc, estado);
-        
             break;
-        case 1: // Decodificação (Não apenas da instrução)
-            decodificaInstrucao(estado, bReg, memoria);
+        case 1: // Decodificação
+            decodificaInstrucao(*pc - 1, estado, bReg);
             break;
         case 2: // Execução tipo I
-            estado->ULASaida = ULA(op1, op2, sinais->ControleUla, zero, &overflow); // sinais->ControleUla são os sinais que enviará para o controle da Ula.
-
-            break;
-        case 3: // Execução LW - parte da finalização do SW, addi e tipo R
-
-            break;
-        case 4: // Finalização LW
-
-            break;
-        case 5: // Finalização SW
-            
-            break;
-        case 6: // Finalização SW
-
+            estado->ULASaida = ULA(op1, op2, sinais->ControleUla, zero, &overflow);
             break;
         case 7: // Execução tipo R
             estado->ULASaida = ULA(op1, op2, sinais->ControleUla, zero, &overflow);
-        
-            break;
-        case 8: // Finalização tipo R
-
             break;
         case 9: // BEQ
-
             if(sinais->branch == 1 && *zero == 1){
                 *pc = novoPc;
             }
-        
             break;
-        case 10:
-            if(sinais->PCEsc==1){
+        case 10: // Jump
+            if(sinais->PCEsc == 1){
                 *pc = novoPc;
             }
             break;
@@ -606,57 +521,42 @@ void imprimeEstatistica(estatInstrucoes estatInst){
     printf("========================================\n\n");
 }
 
-void imprimeInstrucao(MemoriaUnificada *memoria, int pc) {
-    if((memoria)[pc].decodificado==0){
-        decodifica(&memoria[pc]);
-    }
-
-    switch(memoria[pc].opcode){
-        case 0: // opcode = 0000
-
-            if(memoria[pc].funct==0){
-                printf("add $%d, $%d, $%d", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
-            }
-            else if((memoria)[pc].funct==2){
-                printf("sub $%d, $%d, $%d", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
-            }
-            else if((memoria)[pc].funct==4){
-                printf("and $%d, $%d, $%d", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
-            }
-            else if((memoria)[pc].funct==5){
-                printf("or $%d, $%d, $%d", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
-            }
+void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado, int *bReg) {
+    switch(estado->opcode){
+        case 0: // Tipo R
+            if(estado->funct==0)
+                printf("add $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
+            else if(estado->funct==2)
+                printf("sub $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
+            else if(estado->funct==4)
+                printf("and $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
+            else if(estado->funct==5)
+                printf("or $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
             break;
 
-        case 2: // opcode = 0010 - J
-            int x=12;
-            printf("j %d%*s", (memoria)[pc].addr, x, "");
-
+        case 2: // Jump
+            printf("j %d", estado->addr);
             break;
 
-        case 4: // opcode = 0100 - Addi
-            printf("addi $%d, $%d, %d", (memoria)[pc].rt, (memoria)[pc].rs, (memoria)[pc].imm);
-
+        case 4: // Addi
+            printf("addi $%d, $%d, %d", estado->rt, estado->rs, estado->imm);
             break;
 
-        case 8: // opcode = 1000 - BEQ
-            printf("beq $%d, $%d, %d", (memoria)[pc].rs, (memoria)[pc].rt, (memoria)[pc].imm);
-
+        case 8: // BEQ
+            printf("beq $%d, $%d, %d", estado->rs, estado->rt, estado->imm);
             break;
 
-        case 11: // opcode = 1011 - lw
-            printf("lw $%d, %d($%d)", (memoria)[pc].rt, (memoria)[pc].imm, (memoria)[pc].rs);
-
+        case 11: // LW
+            printf("lw $%d, %d($%d)", estado->rt, estado->imm, estado->rs);
             break;
 
-        case 15: // opcode = 1111 - sw
-            printf("sw $%d, %d($%d)", (memoria)[pc].rt, (memoria)[pc].imm, (memoria)[pc].rs);
-
+        case 15: // SW
+            printf("sw $%d, %d($%d)", estado->rt, estado->imm, estado->rs);
             break;
     }
 }
 
-void imprimeMemorias(MemoriaUnificada *memoria){
+void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg){
     int opt, x;
     do{
         printf("\n1. Memória de instruções\n2. Memória de dados\n");
@@ -669,15 +569,17 @@ void imprimeMemorias(MemoriaUnificada *memoria){
 
                 printf("\n%*sMemória de Instruções:\n\n", x, "");
 
+                // Dentro de imprimeMemorias
                 for (int linha = 0; linha < 64; linha++) {
                     printf(" %3d: %16s: ", linha, memoria[linha].mem);
-                    imprimeInstrucao(memoria, linha);
+                    imprimeInstrucao(memoria, linha, estado, bReg);
 
                     printf("\t %3d: %16s: ", linha + 64, memoria[linha + 64].mem);
-                    imprimeInstrucao(memoria, linha + 64);
+                    imprimeInstrucao(memoria, linha + 64, estado, bReg);
 
                     printf("\n");
                 }
+
                 printf("\n");
                 break;
 
@@ -706,7 +608,7 @@ void imprimeMemorias(MemoriaUnificada *memoria){
 
 //-----------------------------------------------Salvamentos---------------------------------------------------
 
-void salvaASM(MemoriaUnificada *memoria, int qntdInst) {
+void salvaASM(MemoriaUnificada *memoria, int qntdInst, regEstado *estado,int *bReg) {
     int pc = 0;
     char nomeASM[50]={0}, nome[20], extensao[] = ".asm", resposta;
 
@@ -741,50 +643,47 @@ void salvaASM(MemoriaUnificada *memoria, int qntdInst) {
     }
 
     while(pc <= qntdInst - 1){
-        if((memoria)[pc].decodificado==0){
-            decodificaInst(&memoria[pc]);
-        }
+        // Carrega a instrução no IR
+        estado->IR = memoria[pc].memoria;
 
+        // Decodifica a instrução atual
+        decodificaInstrucao(pc, estado, bReg);
 
-        switch(memoria[pc].opcode){
-            case 0: // opcode = 0000
-
-                if(memoria[pc].funct==0){
-                    fprintf(arquivo,"add $%d, $%d, $%d\n", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
+        // Agora imprime usando os campos de estado
+        switch(estado->opcode){
+            case 0: // Tipo R
+                if(estado->funct==0){
+                    fprintf(arquivo,"add $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
                 }
-                else if((memoria)[pc].funct==2){
-                    fprintf(arquivo,"sub $%d, $%d, $%d\n", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
+                else if(estado->funct==2){
+                    fprintf(arquivo,"sub $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
                 }
-                else if((memoria)[pc].funct==4){
-                    fprintf(arquivo,"and $%d, $%d, $%d\n", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
+                else if(estado->funct==4){
+                    fprintf(arquivo,"and $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
                 }
-                else if((memoria)[pc].funct==5){
-                    fprintf(arquivo,"or $%d, $%d, $%d\n", (memoria)[pc].rd, (memoria)[pc].rs, (memoria)[pc].rt);
+                else if(estado->funct==5){
+                    fprintf(arquivo,"or $%d, $%d, $%d\n", estado->rd, estado->rs, estado->rt);
                 }
                 break;
 
-            case 2: // opcode = 0010 - J
-                fprintf(arquivo,"j %d\n", (memoria)[pc].addr);
-
+            case 2: // Jump
+                fprintf(arquivo,"j %d\n", estado->addr);
                 break;
 
-            case 4: // opcode = 0100 - Addi
-                fprintf(arquivo,"addi $%d, $%d, %d\n", (memoria)[pc].rt, (memoria)[pc].rs, (memoria)[pc].imm);
-
+            case 4: // Addi
+                fprintf(arquivo,"addi $%d, $%d, %d\n", estado->rt, estado->rs, estado->imm);
                 break;
 
-            case 8: // opcode = 1000 - BEQ
-                fprintf(arquivo,"beq $%d, $%d, %d\n", (memoria)[pc].rs, (memoria)[pc].rt, (memoria)[pc].imm);
-
+            case 8: // BEQ
+                fprintf(arquivo,"beq $%d, $%d, %d\n", estado->rs, estado->rt, estado->imm);
                 break;
 
-            case 11: // opcode = 1011 - lw
-                fprintf(arquivo,"lw $%d, %d($%d)\n", (memoria)[pc].rt, (memoria)[pc].imm, (memoria)[pc].rs);
-
+            case 11: // LW
+                fprintf(arquivo,"lw $%d, %d($%d)\n", estado->rt, estado->imm, estado->rs);
                 break;
-            case 15: // opcode = 1111 - sw
-                fprintf(arquivo,"sw $%d, %d($%d)\n", (memoria)[pc].rt, (memoria)[pc].imm, (memoria)[pc].rs);
 
+            case 15: // SW
+                fprintf(arquivo,"sw $%d, %d($%d)\n", estado->rt, estado->imm, estado->rs);
                 break;
         }
 

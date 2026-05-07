@@ -13,16 +13,35 @@
 extern FILE *arquivo;
 extern FILE *arquivoMemDados;
 
+// enum das instruções
+enum inst{
+    tipoI, tipoJ, tipoR, tipoDado
+};
+
 // struct dos registradores de estado (IR, MDR, A, B e ULASaída)
 typedef struct{
+    // Registradores internos multiciclo
     uint16_t IR;
-    uint16_t MDR; // Os 8 bits mais significativos (15-8) dos elementos da memória de dados serão preenchidos com 0s.
+    uint16_t MDR;
     int8_t A;
     int8_t B;
     int8_t ULASaida;
     int proximoEstado;
-    int estadoAtual;   // Estado/Ciclo da Instrução Atual
-}regEstado;
+    int estadoAtual;
+
+    // Campos decodificados
+    uint8_t opcode;
+    uint8_t rs;
+    uint8_t rt;
+    uint8_t rd;
+    uint8_t funct;
+    int8_t imm;
+    uint8_t addr;
+    enum inst tipoInst;
+
+    // FSM multiciclo
+    int estadoEtapa;
+} regEstado;
 
 // struct das estatísticas
 typedef struct{
@@ -50,11 +69,6 @@ typedef struct{
     // uint8_t PCWriteCond;
     uint8_t PCFonte;
 }sinaisUC;
-
-// struct das instruções
-enum inst{
-    tipoI, tipoJ, tipoR, tipoDado
-};
 
 typedef struct {
     char mem[17];
@@ -109,7 +123,7 @@ End: 8 bits;
 void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado);
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado);
 void imprimeEstatistica(estatInstrucoes estatInst);
-void salvaASM(MemoriaUnificada *memoria, int qntdInst);
+void salvaASM(MemoriaUnificada *memoria, int qntdInst, regEstado *estado,int *bReg);
 void salvaDAT(int *memDados);
 
 // MEMÓRIA
@@ -121,15 +135,14 @@ void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, reg
 // void contaLinhas(char *arq, int *qtInst, int *qtDados);
 //      Essas duas provavelmente serão apagadas pois não são mais utilizadas
 // void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas);
-void imprimeMemorias(MemoriaUnificada *memoria);
-void imprimeInstrucao(MemoriaUnificada *memoria, int pc);
+void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg);
+void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado,int *bReg);
 
 // PROGRAM COUNTER (PC) / BUSCA
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado);
 void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado);
 // DECODIFICAÇÃO
-void decodificaInstrucao(regEstado *estado, int *bReg, MemoriaUnificada *instrucao);   // multiciclo
-void decodificaInst(MemoriaUnificada *instrucao);                // utilitário (ASM)
+void decodificaInstrucao(int pc, regEstado *estado, int *bReg);   // multiciclo
 
 // UNIDADE DE CONTROLE (UC)
 void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais);
