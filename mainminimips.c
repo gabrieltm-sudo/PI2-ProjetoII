@@ -18,15 +18,14 @@ int main(){
     while (1) {
         printf("\nMenu:\n\n");
         printf("1. Carregar Memória de Instruções (.mem)\n");
-        printf("2. Carregar Memória de Dados (.dat)\n");
-        printf("3. Imprimir memórias (instruções e dados)\n");
-        printf("4. Imprimir Banco de Registradores\n");
-        printf("5. Imprimir todo o Simulador\n");
-        printf("6. Salvar .asm\n");
-        printf("7. Salvar .dat\n");
-        printf("8. Executa programa (run)\n");
-        printf("9. Executa uma instrução (step)\n");
-        printf("10. Volta uma instrução (back)\n");
+        printf("2. Imprimir memórias (instruções e dados)\n");
+        printf("3. Imprimir Banco de Registradores\n");
+        printf("4. Imprimir todo o Simulador\n");
+        printf("5. Salvar .asm\n");
+        printf("6. Executa programa (run)\n");
+        printf("7. Executa uma instrução (step)\n");
+        printf("8. Volta uma instrução (back)\n");
+        printf("9. Reset\n");
         printf("0. Sair\n\n");
         printf("Digite uma opção: ");
 
@@ -45,29 +44,17 @@ int main(){
                 qntdInst = lerMemUnificada(arq, memoria);
                 break;
 
-            /*case 2:
-                //Carregar Mem de Dados
-                char arqMem[20];
-                printf("\nDigite o nome do arquivo da memória de dados (.dat): ");
-
-                fgets(arqMem, sizeof(arqMem), stdin);
-                arqMem[strcspn(arqMem, "\n")] = '\0';
-
-                lerMemDados(arqMem, memoria, linhas);
-
-                break;
-            */
-            case 3:
+            case 2:
                 // Imprimir memórias (tanto instruções quanto dados)
                 imprimeMemorias(memoria, &regEstado, bReg);
 
                 break;
 
-            case 4:
+            case 3:
                 //Imprimir Banco de Registradores
                 imprimeBancoRegistradores(bReg);
                 break;
-            case 5:
+            case 4:
                 //Imprimir simulador
                 printf("\nImpressão do simulador:\n");
                 do{
@@ -92,28 +79,27 @@ int main(){
 
                 break;
 
-            case 6:
+            case 5:
                 // Salvar .asm
                 salvaASM(memoria, qntdInst, &regEstado, bReg);
                 break;
 
-            case 7:
-                // Salvar .dat
-                // salvaDAT(memDados);
-                break;
-
-            case 8:
+            case 6:
                 // salvaEstado(&hist, pc, bReg, &estatInst, memoria);
                 run(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
                 break;
 
-            case 9:
+            case 7:
                 step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
                 salvaEstado(&hist, pc, bReg, &estatInst, &regEstado);
                 break;
 
-            case 10:
+            case 8:
                 voltaInstrucao(&hist, &pc, bReg, &estatInst, &regEstado);
+                break;
+
+            case 9:
+                resetSimulador(memoria, &pc, bReg, &estatInst, &regEstado);
                 break;
 
             case 0:

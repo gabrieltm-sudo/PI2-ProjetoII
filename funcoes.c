@@ -133,15 +133,11 @@ void decodificaInstrucao(int pc, regEstado *estado, int *bReg){
             estado->rt = (instr >> 6) & 0x7;
             estado->rd = (instr >> 3) & 0x7;
             estado->funct = instr & 0x7;
-
-            printf("\n=====Decodificação=====\n\nTipo R\nopcode: %d\nrs: %d\nrt: %d\nrd: %d\nfunct: %d\n\n", estado->opcode, estado->rs, estado->rt, estado->rd, estado->funct);
             break;
 
         case 2: // Tipo J
             estado->tipoInst = tipoJ;
             estado->addr = instr & 0xFF;
-
-            printf("\n=====Decodificação=====\n\nTipo J\n\nopcode: %d\naddress: %d\n\n", estado->opcode, estado->addr);
             break;
 
         default: // Tipo I
@@ -151,8 +147,6 @@ void decodificaInstrucao(int pc, regEstado *estado, int *bReg){
             estado->imm = instr & 0x3F;
             estado->imm = extensorBit(estado->imm);
             estado->ULASaida = pc + estado->imm + 1;
-
-            printf("\n=====Decodificação=====\n\nTipo I\nopcode: %d\nrs: %d\nrt: %d\nimm: %d\nendereço branch: %d\n\n", estado->opcode, estado->rs, estado->rt, estado->imm, estado->ULASaida);
             break;
     }
 
@@ -465,8 +459,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     estado->estadoAtual = estado->proximoEstado;
 }
 
-void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,
-                  regEstado *estado, int *zero, int *pc) {
+void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEstado *estado, int *zero, int *pc) {
     int op1, op2, novoPc, overflow, operacaoULA;
 
     // MUXs do UlaFonte e PCFonte
@@ -498,6 +491,19 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,
             break;
         case 1: // Decodificação
             decodificaInstrucao(*pc - 1, estado, bReg);
+            switch(estado->opcode){
+                case 0: // Tipo R
+                    printf("\n=====Decodificação=====\n\nTipo R\nopcode: %d\nrs: %d\nrt: %d\nrd: %d\nfunct: %d\n\n", estado->opcode, estado->rs, estado->rt, estado->rd, estado->funct);
+                    break;
+
+                case 2: // Tipo J
+                    printf("\n=====Decodificação=====\n\nTipo J\n\nopcode: %d\naddress: %d\n\n", estado->opcode, estado->addr);
+                    break;
+
+                default: // Tipo I
+                    printf("\n=====Decodificação=====\n\nTipo I\nopcode: %d\nrs: %d\nrt: %d\nimm: %d\nendereço branch: %d\n\n", estado->opcode, estado->rs, estado->rt, estado->imm, estado->ULASaida);
+                    break;
+            }
             break;
         case 2: // Execução tipo I
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
@@ -589,6 +595,8 @@ void imprimeEstatistica(estatInstrucoes estatInst){
 }
 
 void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado, int *bReg) {
+    int x = 8;
+
     switch(estado->opcode){
         case 0: // Tipo R
             if(estado->funct==0)
@@ -602,7 +610,7 @@ void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado, int 
             break;
 
         case 2: // Jump
-            printf("j %d", estado->addr);
+            printf("j %d%*s", estado->addr, x, "");
             break;
 
         case 4: // Addi
@@ -636,18 +644,23 @@ void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg){
 
                 printf("\n%*sMemória de Instruções:\n\n", x, "");
 
-                // Dentro de imprimeMemorias
                 for (int linha = 0; linha < 64; linha++) {
+                    //1ª coluna
+                    estado->IR = memoria[linha].memoria;
+                    decodificaInstrucao(linha, estado, bReg);
+
                     printf(" %3d: %16s: ", linha, memoria[linha].mem);
                     imprimeInstrucao(memoria, linha, estado, bReg);
 
-                    printf("\t %3d: %16s: ", linha + 64, memoria[linha + 64].mem);
-                    imprimeInstrucao(memoria, linha + 64, estado, bReg);
+                    //2ª coluna
+                    estado->IR = memoria[linha+64].memoria;
+                    decodificaInstrucao(linha+64, estado, bReg);
+
+                    printf("\t %3d: %16s: ", linha+64, memoria[linha+64].mem);
+                    imprimeInstrucao(memoria, linha+64, estado, bReg);
 
                     printf("\n");
                 }
-
-                printf("\n");
                 break;
 
             case 2:
@@ -772,16 +785,23 @@ void inicializaHistorico(Historico *hist) {
 void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg) {
     Estado *novo = malloc(sizeof(Estado));
     novo->pc = pc;
-    for(int i=0;i<8;i++) novo->bReg[i] = bReg[i];
+
+    for(int i=0;i<8;i++) {
+        novo->bReg[i] = bReg[i];
+    }
+
     novo->estat = *estatInst;
     novo->estadoAtual = reg->estadoAtual;
     novo->proximoEstado = reg->proximoEstado;
-
     novo->anterior = hist->ultimo;
     novo->proximo = NULL;
+    novo->IR = reg->IR;
 
-    if(hist->ultimo) hist->ultimo->proximo = novo;
-    else hist->primeiro = novo;
+    if(hist->ultimo) {
+        hist->ultimo->proximo = novo;
+    } else {
+        hist->primeiro = novo;
+    }
 
     hist->ultimo = novo;
     hist->atual = novo;
@@ -791,12 +811,51 @@ void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatI
     if(hist->atual && hist->atual->anterior) {
         hist->atual = hist->atual->anterior;
         *pc = hist->atual->pc;
-        for(int i=0;i<8;i++) bReg[i] = hist->atual->bReg[i];
+
+        for(int i=0;i<8;i++) {
+            bReg[i] = hist->atual->bReg[i];
+        }
+
         *estatInst = hist->atual->estat;
         reg->estadoAtual = hist->atual->estadoAtual;
         reg->proximoEstado = hist->atual->proximoEstado;
+        reg->IR = hist->atual->IR;
+
+        if (reg->estadoAtual == 1) {
+            decodificaInstrucao(*pc, reg, bReg);
+        }
+
         printf("\nVoltou uma instrução! PC=%d\nEstado atual: %d\n", *pc, reg->estadoAtual);
     } else {
         printf("\nNão há instrução anterior!\n");
     }
+}
+
+void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *estado) {
+    // Zera PC
+    *pc = 0;
+
+    // Zera banco de registradores
+    for (int i = 0; i < 8; i++) {
+        bReg[i] = 0;
+    }
+
+    // Zera memória de dados (mantém instruções)
+    for (int i = 128; i < 256; i++) {
+        memoria[i].dado = 0;
+        memoria[i].memoria = 0;
+        strcpy(memoria[i].mem, "0000000000000000");
+    }
+
+    // Zera estatísticas
+    memset(estatInst, 0, sizeof(estatInstrucoes));
+
+    // Reset estado da UC
+    estado->estadoAtual = 0;
+    estado->proximoEstado = 0;
+    estado->IR = 0;
+    estado->MDR = 0;
+    estado->A = 0;
+    estado->B = 0;
+    estado->ULASaida = 0;
 }

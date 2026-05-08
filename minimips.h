@@ -92,6 +92,7 @@ typedef struct Estado {
     estatInstrucoes estat;
     int estadoAtual;
     int proximoEstado;
+    uint16_t IR;
     struct Estado *anterior;
     struct Estado *proximo;
 } Estado;
@@ -163,6 +164,10 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
 void inicializaHistorico(Historico *hist);
 void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg);
 void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg);
+// -------------------------------------------------------------------------
+
+//RESET DO SIMULADOR
+void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *estado);
 // -------------------------------------------------------------------------
 
 #endif
