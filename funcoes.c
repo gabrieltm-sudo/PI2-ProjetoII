@@ -564,10 +564,11 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             break;
 
         case 9: // BEQ
+            int resultado;
             printf("\nCiclo de decisão - BEQ\n");
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
-            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow); // está sobrescrevendo o endereço calculado no estado 1.
-            if(sinais->branch == 1 && *zero == 1){
+            resultado = ULA(op1, op2, operacaoULA, zero, &overflow); // está sobrescrevendo o endereço calculado no estado 1.
+            if(resultado == 0 && sinais->branch == 1 && *zero == 1){
                 *pc = estado->ULASaida;
                 printf("\nBranch tomado, PC atualizado para %d\n", *pc);
             } else {
