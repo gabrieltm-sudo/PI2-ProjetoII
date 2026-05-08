@@ -248,6 +248,7 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
 
             break;
         case 9: // 9º Estado - Término BEQ
+            sinais->PCEsc = 1;
             sinais->PCFonte = 1; // PC recebe o endereço calculado no estado 1
             sinais->branch = 1;
             sinais->UlaFonteA = 1;
@@ -567,7 +568,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             int resultado;
             printf("\nCiclo de decisão - BEQ\n");
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
-            resultado = ULA(op1, op2, operacaoULA, zero, &overflow); // está sobrescrevendo o endereço calculado no estado 1.
+            resultado = ULA(op1, op2, operacaoULA, zero, &overflow);
             if(resultado == 0 && sinais->branch == 1 && *zero == 1){
                 *pc = estado->ULASaida;
                 printf("\nBranch tomado, PC atualizado para %d\n", *pc);
