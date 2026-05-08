@@ -85,18 +85,22 @@ typedef struct {
     int decodificado;
 } MemoriaUnificada;
 
-// struct back
-typedef struct {
+//step back
+typedef struct Estado {
     int pc;
-    uint16_t memDados[128]; //TIRAR MEM DADOS POIS AGORA É UNIFICADO - É mantido pois os dados são algo que depende do estado.
     int bReg[8];
     estatInstrucoes estat;
-} estado; //estadoAnterior
+    int estadoAtual;
+    int proximoEstado;
+    struct Estado *anterior;
+    struct Estado *proximo;
+} Estado;
 
 typedef struct {
-    estado estados[MAX_HIST];
-    int topo;
-} historico;
+    Estado *primeiro;   // início da lista
+    Estado *ultimo;     // fim da lista
+    Estado *atual;      // posição atual
+} Historico;
 
 /*Instruções:
 Tipo R:
@@ -124,25 +128,21 @@ void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatI
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado);
 void imprimeEstatistica(estatInstrucoes estatInst);
 void salvaASM(MemoriaUnificada *memoria, int qntdInst, regEstado *estado,int *bReg);
-void salvaDAT(int *memDados);
 
 // MEMÓRIA
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada);
 void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor);
 int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
 void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria);
-
-// void contaLinhas(char *arq, int *qtInst, int *qtDados);
-//      Essas duas provavelmente serão apagadas pois não são mais utilizadas
-// void lerMemDados(char *arq, MemoriaUnificada *memUnificada, int linhas);
 void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg);
 void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado,int *bReg);
 
 // PROGRAM COUNTER (PC) / BUSCA
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado);
 void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado);
+
 // DECODIFICAÇÃO
-void decodificaInstrucao(int pc, regEstado *estado, int *bReg);   // multiciclo
+void decodificaInstrucao(int pc, regEstado *estado, int *bReg);
 
 // UNIDADE DE CONTROLE (UC)
 void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais);
@@ -150,21 +150,19 @@ int defineEstado(int estadoAtual, uint8_t opcode);
 
 // BANCO DE REGISTRADORES (BREG)
 int *inicializaBReg();
-void lerRegistradores(int *reg, int8_t rs, int8_t rt, int8_t *valRs, int8_t *valRt);
-void escreveRegistrador(int *reg, int8_t rd, int8_t valor, int EscReg);
 void imprimeBancoRegistradores(int *reg);
 
 // EXECUÇÃO
 void executaCiclo(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, int *zero, int *pc);
 int8_t extensorBit(int8_t imm);
-void writeBack(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado);
+
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
 int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
 
 // HISTÓRICO
-void salvaEstado(historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, MemoriaUnificada *mem);
-void voltaInstrucao(historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst);
-
+void inicializaHistorico(Historico *hist);
+void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg);
+void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg);
 // -------------------------------------------------------------------------
 
 #endif

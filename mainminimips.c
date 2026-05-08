@@ -7,17 +7,12 @@
 int main(){
 
     int opcao, pc = 0, qntdInst = 0;
-
     estatInstrucoes estatInst = {0};
-    
     regEstado regEstado;
     sinaisUC sinais;
-
     MemoriaUnificada memoria[TAM_MEMORIA] = {0};
-
-    //historico hist;
-    //hist.topo = 0;
-
+    Historico hist;
+    inicializaHistorico(&hist);
     int *bReg = inicializaBReg();
 
     while (1) {
@@ -41,7 +36,7 @@ int main(){
         switch (opcao) {
             case 1:
                 //Carregar Memórias
-                char arq[20];
+                char arq[50];
                 printf("\nDigite o nome do arquivo da memória (.mem): ");
 
                 fgets(arq, sizeof(arq), stdin);
@@ -113,14 +108,12 @@ int main(){
                 break;
 
             case 9:
-                //Executa instrução (step)
-                // salvaEstado(&hist, pc, bReg, &estatInst, memoria);
                 step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
+                salvaEstado(&hist, pc, bReg, &estatInst, &regEstado);
                 break;
 
             case 10:
-                //Voltar instrução (back)
-                //voltaInstrucao(&hist, &pc, bReg, &estatInst);
+                voltaInstrucao(&hist, &pc, bReg, &estatInst, &regEstado);
                 break;
 
             case 0:
