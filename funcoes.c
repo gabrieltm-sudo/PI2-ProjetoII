@@ -94,7 +94,7 @@ void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, reg
     if (instrucao->opcode == 11) { // LW
         estado->MDR = memoria[estado->ULASaida].dado;
     } else if (instrucao->opcode == 15) { // SW
-        memoria[estado->ULASaida].memoria = estado->B;
+        memoria[estado->ULASaida].dado = estado->B;
     }
 }
 
