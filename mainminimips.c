@@ -64,7 +64,7 @@ int main(){
             */
             case 3:
                 // Imprimir memórias (tanto instruções quanto dados)
-                imprimeMemorias(memoria);
+                imprimeMemorias(memoria, &regEstado, bReg);
 
                 break;
 
@@ -84,7 +84,7 @@ int main(){
                             imprimeBancoRegistradores(bReg);
                             break;
                         case 2:
-                            imprimeMemorias(memoria);
+                            imprimeMemorias(memoria, &regEstado, bReg);
                             break;
                         case 3:
                             imprimeEstatistica(estatInst);
@@ -99,7 +99,7 @@ int main(){
 
             case 6:
                 // Salvar .asm
-                salvaASM(memoria, qntdInst);
+                salvaASM(memoria, qntdInst, &regEstado, bReg);
                 break;
 
             case 7:
