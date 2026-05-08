@@ -112,7 +112,7 @@ void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
 
 
 //------------------------------------------Decodificação-------------------------------------------------
- void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) { // MUDAR NOME - ProgramCounter não faz sentido.
+ void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) {
     if (instrucao->opcode == 8 && zero) { // BEQ
         *pc = estado->ULASaida;
     } else if (instrucao->opcode == 2) { // JUMP
@@ -263,7 +263,6 @@ void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sina
         break;
     }
 
-    estado->proximoEstado = defineEstado(estado->estadoAtual, opcode);
 }
 
 int defineEstado(int estadoAtual, uint8_t opcode){
@@ -281,7 +280,7 @@ int defineEstado(int estadoAtual, uint8_t opcode){
                     return 9;
                 default: // Tipo I (addi, sw e lw)
                     return 2;
-                    }
+                }
         case 2:
             switch(opcode){
                 case 4: // addi
@@ -290,7 +289,9 @@ int defineEstado(int estadoAtual, uint8_t opcode){
                     return 3;
                 case 15: // sw
                     return 5;
-                    }
+                default:
+                    return 0;
+                }
         case 3:
             return 4;
         case 7:
@@ -408,17 +409,19 @@ void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatI
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     estatInstrucoes *estatInst, regEstado *estado) {
     int zero = 0;
-
+    
     if (*pc >= 256 || memoria[*pc].memoria == 0) {
         printf("\nFim das instruções!\n");
         return;
     }
-
+    
     printf("\n[ Estado atual: %d ]\n", estado->estadoAtual);
     printf("\nPC Atual = %d\n", *pc);
-
+    
+    uint8_t opcodeAtual = (estado->IR >> 12) & 0xF;
+    uint8_t functAtual = estado->IR & 0x7;
     // Controle e execução do ciclo
-    unidadeControleMulti(estado->opcode, estado->funct, estado, sinais);
+    unidadeControleMulti(opcodeAtual, functAtual, estado, sinais);
     executaCiclo(memoria, sinais, bReg, estado, &zero, pc);
 
     // Imprime usando a assinatura correta
@@ -456,6 +459,8 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     }
 
     estatInst->total++;
+    estado->proximoEstado = defineEstado(estado->estadoAtual, opcodeAtual);
+    printf("\n[ Próximo estado: %d ]\n", estado->proximoEstado);
     estado->estadoAtual = estado->proximoEstado;
 }
 
@@ -482,14 +487,17 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
 
     switch(estado->estadoAtual){
         case 0: // Busca
+            printf("\nCiclo da busca\n");
             buscaInstrucao(memoria, pc, estado);
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
             if(sinais->PCEsc){
                 *pc = estado->ULASaida;
+                printf("\nPC atualizado para %d\n", *pc);
             }
             break;
         case 1: // Decodificação
+            printf("\nCiclo da decodificação\n");
             decodificaInstrucao(*pc - 1, estado, bReg);
             switch(estado->opcode){
                 case 0: // Tipo R
@@ -506,56 +514,74 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             }
             break;
         case 2: // Execução tipo I
+            printf("\nCiclo da execução - Tipo I\n");
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            printf("\n%d calculado na ULA\n", estado->ULASaida);
             break;
         case 3: // LW - leitura memória
+            printf("\nCiclo de acesso à memória - LW\n");
             acessoMemoria(&memoria[*pc - 1], sinais, bReg, estado, memoria);
+            printf("\n%d lido de mem[%d] para MDR\n", estado->MDR, estado->ULASaida);
             break;
         case 4: // LW - write back
+            printf("\nCiclo de finalização - LW\n");
             if(sinais->EscReg){
                 bReg[estado->rt] = estado->MDR;   // Reg[rt] ← MDR
+                printf("\n%d armazenado em $%d\n", estado->MDR, estado->rt);
             }
             break;
 
         case 5: // SW - Write Memory
+            printf("\nCiclo de Acesso à memória - SW\n");
             if(sinais->EscMem){
                 memoria[estado->ULASaida].dado = estado->B;  // Mem[ULASaida] ← B
+                printf("\n%d armazenado em mem[%d]\n", estado->B, estado->ULASaida);
             }
             break;
 
-        case 6: // ADDI - Write Back
+        case 6: // ADDI - Finalização
+            printf("\nCiclo de finalização - addi\n");
             if(sinais->EscReg){
                 bReg[estado->rt] = estado->ULASaida;  // Reg[rt] ← resultado da ULA
+                printf("\n%d armazenado em $%d\n", estado->ULASaida, estado->rt);
             }
             break;
 
         case 7: // Execução tipo R
+            printf("\nCiclo da execução - Tipo R\n");
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            printf("\n%d calculado na ULA\n", estado->ULASaida);
             break;
 
         case 8: // Tipo R - Write Back
+            printf("\nCiclo de finalização - Tipo R\n");
             if(sinais->EscReg){
                 bReg[estado->rd] = estado->ULASaida;  // Reg[rd] ← resultado da ULA
+                printf("\n%d armazenado em $%d\n", estado->ULASaida, estado->rd);
             }
             break;
 
         case 9: // BEQ
+            printf("\nCiclo de decisão - BEQ\n");
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
-            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow); // está sobrescrevendo o endereço calculado no estado 1.
             if(sinais->branch == 1 && *zero == 1){
-            *pc = estado->ULASaida;
+                *pc = estado->ULASaida;
+                printf("\nBranch tomado, PC atualizado para %d\n", *pc);
+            } else {
+                printf("\nBranch não tomado\n");
             }
             break;
         case 10: // Jump
+            printf("\nCiclo de jump\n");
             if(sinais->PCEsc == 1){
                 *pc = novoPc;
+                printf("\nPC atualizado para %d\n", *pc);
             }
             break;
     }
-
-    printf("\n[ Próximo estado: %d ]\n", estado->proximoEstado);
 }
 
 //-----------------------------------------------Impressões----------------------------------------------------
