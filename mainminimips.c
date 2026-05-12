@@ -72,7 +72,7 @@ int main(){
                             imprimeEstatistica(estatInst);
                             break;
                         default:
-                            printf("Opção inválida! Por favor selecione uma das opções disponíveis.\n");
+                            printf("\nOpção inválida! Por favor selecione uma das opções disponíveis.\n");
                             break;
                     }
                 }while(opcao<1 || opcao>3);

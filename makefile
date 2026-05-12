@@ -19,3 +19,4 @@ compilerun:
 rm:
 	rm -f funcoes
 	rm -f exec
+	rm -f *.asm

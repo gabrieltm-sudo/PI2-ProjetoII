@@ -26,7 +26,6 @@ typedef struct{
     int8_t A;
     int8_t B;
     int8_t ULASaida;
-    int proximoEstado;
     int estadoAtual;
 
     // Campos decodificados
@@ -91,7 +90,6 @@ typedef struct Estado {
     int bReg[8];
     estatInstrucoes estat;
     int estadoAtual;
-    int proximoEstado;
     uint16_t IR;
     struct Estado *anterior;
     struct Estado *proximo;
@@ -129,6 +127,7 @@ void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatI
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado);
 void imprimeEstatistica(estatInstrucoes estatInst);
 void salvaASM(MemoriaUnificada *memoria, int qntdInst, regEstado *estado,int *bReg);
+void salvaMem(MemoriaUnificada *memoria, int qntdInst);
 
 // MEMÓRIA
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada);
@@ -147,7 +146,7 @@ void decodificaInstrucao(int pc, regEstado *estado, int *bReg);
 
 // UNIDADE DE CONTROLE (UC)
 void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais);
-int defineEstado(int estadoAtual, uint8_t opcode);
+void defineEstado(int *estadoAtual, uint8_t opcode);
 
 // BANCO DE REGISTRADORES (BREG)
 int *inicializaBReg();
