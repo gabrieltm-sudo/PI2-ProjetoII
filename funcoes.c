@@ -90,9 +90,6 @@ void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor)
     }
 }
 
-int8_t retornaMemoria(int *memDados, uint8_t enderecoULA) {
-    return memDados[enderecoULA];
-}
 
 void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria) {
     if (instrucao->opcode == 11) { // LW
@@ -117,13 +114,6 @@ void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
 
 
 //------------------------------------------Decodificação-------------------------------------------------
- void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado) {
-    if (instrucao->opcode == 8 && zero) { // BEQ
-        *pc = estado->ULASaida;
-    } else if (instrucao->opcode == 2) { // JUMP
-        *pc = estado->IR & 0xFF; // 8 bits menos significativos
-    }
-}
 
 // Decodifica a instrução guardada no IR e carrega registradores
 void decodificaInstrucao(int pc, regEstado *estado, int *bReg){

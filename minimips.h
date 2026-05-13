@@ -37,9 +37,6 @@ typedef struct{
     int8_t imm;
     uint8_t addr;
     enum inst tipoInst;
-
-    // FSM multiciclo
-    int estadoEtapa;
 } regEstado;
 
 // struct das estatísticas
@@ -132,14 +129,12 @@ void salvaMem(MemoriaUnificada *memoria, int qntdInst);
 // MEMÓRIA
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada);
 void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor);
-int8_t retornaMemoria(int *memDados, uint8_t enderecoULA);
 void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria);
 void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg);
 void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado,int *bReg);
 
 // PROGRAM COUNTER (PC) / BUSCA
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado);
-void programCounter(int *pc, sinaisUC *sinais, MemoriaUnificada *instrucao, int zero, regEstado *estado);
 
 // DECODIFICAÇÃO
 void decodificaInstrucao(int pc, regEstado *estado, int *bReg);
