@@ -129,7 +129,7 @@ void salvaMem(MemoriaUnificada *memoria, int qntdInst);
 // MEMÓRIA
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada);
 void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor);
-void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria);
+void acessoMemoria(regEstado *estado, MemoriaUnificada *memoria);
 void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg);
 void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado,int *bReg);
 

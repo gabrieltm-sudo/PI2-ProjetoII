@@ -91,11 +91,11 @@ void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor)
 }
 
 
-void acessoMemoria(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regEstado *estado, MemoriaUnificada *memoria) {
-    if (instrucao->opcode == 11) { // LW
-        estado->MDR = memoria[estado->ULASaida].dado;
-    } else if (instrucao->opcode == 15) { // SW
-        memoria[estado->ULASaida].dado = estado->B;
+void acessoMemoria(regEstado *estado, MemoriaUnificada *memoria) {
+    if (estado->opcode == 11) { // LW
+        estado->MDR = memoria[estado->ULASaida + INI_DADOS].dado;
+    } else if (estado->opcode == 15) { // SW
+        memoria[estado->ULASaida + INI_DADOS].dado = estado->B;
     }
 }
 
@@ -535,8 +535,8 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             break;
         case 3: // LW - leitura memória
             printf("\n[MEM] LW\n");
-            acessoMemoria(&memoria[*pc - 1], sinais, bReg, estado, memoria);
-            printf("[MEMD] mem[%d] -> MDR = %d\n", estado->ULASaida, estado->MDR);
+            acessoMemoria(estado, memoria);
+            printf("[MEMD] mem[%d] -> MDR = %d\n", estado->ULASaida + INI_DADOS, estado->MDR);
             break;
         case 4: // LW - write back
             printf("\n[WB] LW\n");
@@ -548,9 +548,10 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
 
         case 5: // SW - Write Memory
             printf("\n[MEM] SW\n");
+            printf("[DEBUG SW] estado->B = %d | bReg[2] = %d\n", estado->B, bReg[2]);
             if(sinais->EscMem){
-                memoria[estado->ULASaida].dado = estado->B;  // Mem[ULASaida] ← B
-                printf("[MEMD] mem[%d] = %d\n", estado->ULASaida, estado->B);
+                acessoMemoria(estado, memoria);
+                printf("[MEMD] mem[%d] = %d\n", estado->ULASaida + INI_DADOS, estado->B);
             }
             break;
 
