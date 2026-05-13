@@ -46,7 +46,7 @@ int main(){
 
             case 2:
                 // Imprimir memórias (tanto instruções quanto dados)
-                imprimeMemorias(memoria, &regEstado, bReg);
+                imprimeMemorias(memoria, bReg);
 
                 break;
 
@@ -66,7 +66,7 @@ int main(){
                             imprimeBancoRegistradores(bReg);
                             break;
                         case 2:
-                            imprimeMemorias(memoria, &regEstado, bReg);
+                            imprimeMemorias(memoria, bReg);
                             break;
                         case 3:
                             imprimeEstatistica(estatInst);

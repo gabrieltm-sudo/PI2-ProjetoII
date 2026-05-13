@@ -672,8 +672,10 @@ void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado, int 
     }
 }
 
-void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg){
+void imprimeMemorias(MemoriaUnificada *memoria, int *bReg){
     int opt, x;
+
+    regEstado temp;
     do{
         printf("\n==========================================\n");
         printf("Impressão de memórias\n");
@@ -691,18 +693,18 @@ void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg){
 
                 for (int linha = 0; linha < 64; linha++) {
                     //1ª coluna
-                    estado->IR = memoria[linha].memoria;
-                    decodificaInstrucao(linha, estado, bReg);
+                    temp.IR = memoria[linha].memoria;
+                    decodificaInstrucao(linha, &temp, bReg);
 
                     printf(" %3d | %16s | ", linha, memoria[linha].mem);
-                    imprimeInstrucao(memoria, linha, estado, bReg);
+                    imprimeInstrucao(memoria, linha, &temp, bReg);
 
                     //2ª coluna
-                    estado->IR = memoria[linha+64].memoria;
-                    decodificaInstrucao(linha+64, estado, bReg);
+                    temp.IR = memoria[linha+64].memoria;
+                    decodificaInstrucao(linha+64, &temp, bReg);
 
                     printf("\t %3d | %16s | ", linha+64, memoria[linha+64].mem);
-                    imprimeInstrucao(memoria, linha+64, estado, bReg);
+                    imprimeInstrucao(memoria, linha+64, &temp, bReg);
 
                     printf("\n");
                 }

@@ -130,7 +130,7 @@ void salvaMem(MemoriaUnificada *memoria, int qntdInst);
 int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada);
 void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor);
 void acessoMemoria(regEstado *estado, MemoriaUnificada *memoria);
-void imprimeMemorias(MemoriaUnificada *memoria, regEstado *estado, int *bReg);
+void imprimeMemorias(MemoriaUnificada *memoria, int *bReg);
 void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado,int *bReg);
 
 // PROGRAM COUNTER (PC) / BUSCA
