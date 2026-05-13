@@ -140,7 +140,7 @@ void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado);
 void decodificaInstrucao(int pc, regEstado *estado, int *bReg);
 
 // UNIDADE DE CONTROLE (UC)
-void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais);
+void unidadeControleMulti(regEstado *estado, sinaisUC *sinais);
 void defineEstado(int *estadoAtual, uint8_t opcode);
 
 // BANCO DE REGISTRADORES (BREG)

@@ -162,7 +162,7 @@ int8_t extensorBit(int8_t imm){
 
 //---------------------------------------Unidade de Controle (UC)----------------------------------------------
 
-void unidadeControleMulti(uint8_t opcode, uint8_t funct, regEstado *estado, sinaisUC *sinais) {
+void unidadeControleMulti(regEstado *estado, sinaisUC *sinais) {
     // Zera sinais
     *sinais = (sinaisUC){0};
 
@@ -431,10 +431,8 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     printf("\n[Estado atual] %d\n", estado->estadoAtual);
     printf("[PC] %d\n", *pc);
     
-    uint8_t opcodeAtual = (estado->IR >> 12) & 0xF;
-    uint8_t functAtual = estado->IR & 0x7;
     // Controle e execução do ciclo
-    unidadeControleMulti(opcodeAtual, functAtual, estado, sinais);
+    unidadeControleMulti(estado, sinais);
     executaCiclo(memoria, sinais, bReg, estado, &zero, pc);
 
     // Imprime usando a assinatura correta
@@ -476,7 +474,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
         estatInst->total++;
     }
 
-    defineEstado(&estado->estadoAtual, opcodeAtual);
+    defineEstado(&estado->estadoAtual, estado->opcode);
     printf("[Próximo estado] %d\n", estado->estadoAtual);
 }
 
