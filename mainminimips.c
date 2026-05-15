@@ -102,7 +102,7 @@ int main(){
                 break; // Adicione este break
 
             case 9: // Volta uma instrução (back)
-                voltaInstrucao(&hist, &pc, bReg, &estatInst, &regEstado);
+                voltaInstrucao(&hist, &pc, bReg, &estatInst, &regEstado, memoria);
                 break; // Adicione este break
 
             case 10: // Reset

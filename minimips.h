@@ -162,7 +162,7 @@ int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
 // HISTÓRICO
 void inicializaHistorico(Historico *hist);
 void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg);
-void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg);
+void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg, MemoriaUnificada *memoria);
 // -------------------------------------------------------------------------
 
 //RESET DO SIMULADOR

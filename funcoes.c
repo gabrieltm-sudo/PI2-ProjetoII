@@ -140,9 +140,10 @@ void decodificaInstrucao(int pc, regEstado *estado, int *bReg){
             estado->rt = (instr >> 6) & 0x7;
             estado->imm = instr & 0x3F;
             estado->imm = extensorBit(estado->imm);
-            estado->ULASaida = pc + estado->imm + 1;
             break;
     }
+
+    estado->ULASaida = pc + extensorBit(instr & 0x3F) + 1;
 
     if(estado->tipoInst != tipoJ){
         estado->A = bReg[estado->rs];
@@ -911,7 +912,7 @@ void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst,
     hist->atual = novo;
 }
 
-void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg) {
+void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg, MemoriaUnificada *memoria) {
     if(hist->atual && hist->atual->anterior) {
         hist->atual = hist->atual->anterior;
         *pc = hist->atual->pc;
@@ -934,6 +935,12 @@ void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatI
     } else {
         printf("\n[INFO] Não há estados anteriores no histórico.\n");
     }
+
+    printf("IR: %s\n", memoria[*pc].mem);
+    printf("MDR: %d\n", reg->MDR);
+    printf("A: %d\n", reg->A);
+    printf("B: %d\n", reg->B);
+    printf("ULASaida: %d\n", reg->ULASaida);
 }
 
 void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *estado) {
