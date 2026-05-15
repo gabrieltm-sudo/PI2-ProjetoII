@@ -912,6 +912,51 @@ void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstruco
 }
 
 void salvaMem(MemoriaUnificada *memoria, int qntdInst) {
-    // Implementação futura para salvar o estado da memória se desejar
-    printf("\n[INFO] Função salvaMem chamada para %d instruções.\n", qntdInst);
+    int pc = 0;
+    char nomeMEM[50] = {0}, nome[40] = {0}, extensao[] = ".mem", resposta;
+
+    printf("\nNome do arquivo .mem: ");
+    fgets(nome, sizeof(nome), stdin);
+    nome[strcspn(nome, "\n")] = '\0';
+    
+    int indice = 1;
+
+    snprintf(nomeMEM, sizeof(nomeMEM), "%s%s", nome, extensao);
+
+    while (access(nomeMEM, F_OK) != -1) {
+        printf("\nArquivo '%s' já existe. Sobrescrever? (s/n): ", nomeMEM);
+        scanf(" %c", &resposta);
+
+        if (resposta == 's' || resposta == 'S') {
+            break;
+        } else if (resposta == 'n' || resposta == 'N') {
+            snprintf(nomeMEM, sizeof(nomeMEM), "%s_%d%s", nome, indice, extensao);
+            indice++;
+        } else {
+            printf("\n[ERRO] Opção inválida. Tente novamente.\n");
+        }
+    }
+
+    arquivo = fopen(nomeMEM, "w");
+
+    if (arquivo == NULL) {
+        printf("\n[ERRO] Não foi possível criar o arquivo.\n");
+        return;
+    }
+
+    for (int i = 0; i < qntdInst && i < 128; i++) {
+        fprintf(arquivo, "%s\n", memoria[i].mem);
+    }
+
+    fprintf(arquivo, ".data\n");
+
+    for (int addr = 128; addr < 256; addr++) {
+        if (memoria[addr].dado != 0 || strcmp(memoria[addr].mem, "0000000000000000") != 0) {
+            fprintf(arquivo, "%d:%s\n", addr, memoria[addr].mem);
+        }
+    }
+
+    fclose(arquivo);
+
+    printf("\nArquivo salvo: %s\n", nomeMEM);
 }
