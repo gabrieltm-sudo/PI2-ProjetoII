@@ -142,9 +142,7 @@ void decodificaInstrucao(int pc, regEstado *estado, int *bReg){
             estado->imm = extensorBit(estado->imm);
             break;
     }
-
-    estado->ULASaida = pc + extensorBit(instr & 0x3F) + 1;
-
+    
     if(estado->tipoInst != tipoJ){
         estado->A = bReg[estado->rs];
         estado->B = bReg[estado->rt];
@@ -435,13 +433,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     unidadeControleMulti(estado, sinais);
     executaCiclo(memoria, sinais, bReg, estado, &zero, pc);
 
-    // Imprime usando a assinatura correta
-    if(estado->estadoAtual==1){
-        imprimeInstrucao(memoria, *pc - 1, estado, bReg);
-        printf("\n");
-    }
-
-    memoria[*pc - 1].decodificado = 1;
+    memoria[*pc - 1].decodificado = 1; // Verificar se necessário no cenário atual
 
     // Estatísticas
     if(estado->estadoAtual == 1){
@@ -498,142 +490,107 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
         novoPc = estado->ULASaida;
     else if(sinais->PCFonte == 2)
         novoPc = estado->addr;
+    
+    operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
+
+    printf("\n==========================================================\n");
+    printf(" Ciclo atual | Estado: %d | PC: %d\n", estado->estadoAtual, *pc);
+    printf("==========================================================\n");
 
     switch(estado->estadoAtual){
         case 0: // Busca
-            printf("\n[IF] Busca\n\n");
+            printf("\n[IF] Busca de instrução\n");
             buscaInstrucao(memoria, pc, estado);
-            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
             if(sinais->PCEsc){
                 *pc = estado->ULASaida;
                 printf("[PC] Atualizado para %d\n", *pc);
-                printf("IR: %s\n", memoria[*pc].mem);
-                printf("MDR: %d\n", estado->MDR);
-                printf("A: %d\n", estado->A);
-                printf("B: %d\n", estado->B);
-                printf("ULASaida: %d\n", estado->ULASaida);
             }
             break;
         case 1: // Decodificação
-            printf("\n[ID] Decodificação\n\n");
+            printf("\n[ID] Decodificação\n");
             decodificaInstrucao(*pc - 1, estado, bReg);
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n\n", estado->ULASaida);
+            
             switch(estado->opcode){
                 case 0: // Tipo R
-                    printf("Tipo R | opcode = %d rs = %d rt = %d rd = %d funct = %d\n", estado->opcode, estado->rs, estado->rt, estado->rd, estado->funct);
+                    printf("Tipo R  | opcode: %d | rs: %d | rt: %d | rd: %d | funct: %d\n", estado->opcode, estado->rs, estado->rt, estado->rd, estado->funct);
                     break;
 
                 case 2: // Tipo J
-                    printf("Tipo J | opcode = %d addr = %d\n", estado->opcode, estado->addr);
+                    printf("Tipo J  | opcode: %d | addr: %d\n", estado->opcode, estado->addr);
                     break;
 
                 default: // Tipo I
-                    printf("Tipo I | opcode = %d rs = %d rt = %d imm = %d\n", estado->opcode, estado->rs, estado->rt, estado->imm);
+                    printf("Tipo I  | opcode: %d | rs: %d | rt: %d | imm: %d\n", estado->opcode, estado->rs, estado->rt, estado->imm);
                     break;
             }
+
+            imprimeInstrucao(memoria, *pc - 1, estado, bReg);
+            printf("\n");
+
+
+            estado->ULASaida = ULA(*pc, (extensorBit(estado->IR & 0x3F)+1),  operacaoULA, zero, &overflow);
+            
+            printf("[EX] Endereço de desvio calculado: %d\n", estado->ULASaida);
             break;
         case 2: // Execução tipo I
-            printf("\n[EX] Tipo I\n");
-            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
+            printf("\n[EX] Execução tipo I\n");
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
-
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n", estado->ULASaida);
 
             break;
         case 3: // LW - leitura memória
-            printf("\n[MEM] LW\n");
+            printf("\n[MEM] LW - leitura de memória\n");
             acessoMemoria(estado, memoria);
-            //printf("[MEMD] mem[%d] -> MDR = %d\n", estado->ULASaida + INI_DADOS, estado->MDR);
+            printf("[MEMD] mem[%d] -> MDR = %d\n", estado->ULASaida + INI_DADOS, estado->MDR);
 
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n", estado->ULASaida);
+
 
             break;
         case 4: // LW - write back
-            printf("\n[WB] LW\n");
+            printf("\n[WB] LW - escrita no banco\n");
             if(sinais->EscReg){
                 bReg[estado->rt] = estado->MDR;   // Reg[rt] ← MDR
-                //printf("[BREG] $%d = %d\n", estado->rt, estado->MDR);
-
-                printf("IR: %s\n", memoria[*pc].mem);
-                printf("MDR: %d\n", estado->MDR);
-                printf("A: %d\n", estado->A);
-                printf("B: %d\n", estado->B);
-                printf("ULASaida: %d\n", estado->ULASaida);
+                printf("[BREG] $%d = %d\n", estado->rt, estado->MDR);
             }
             break;
 
         case 5: // SW - Write Memory
-            printf("\n[MEM] SW\n");
-            printf("[DEBUG SW] estado->B = %d | bReg[2] = %d\n", estado->B, bReg[2]);
+            printf("\n[MEM] SW - escrita em memória\n");
             if(sinais->EscMem){
                 acessoMemoria(estado, memoria);
-                //printf("[MEMD] mem[%d] = %d\n", estado->ULASaida + INI_DADOS, estado->B);
+                printf("[MEMD] mem[%d] = %d\n", estado->ULASaida + INI_DADOS, estado->B);
             }
 
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n", estado->ULASaida);
             break;
 
         case 6: // ADDI - Finalização
-            printf("\n[WB] ADDI\n");
+            printf("\n[WB] ADDI - escrita no banco\n");
             if(sinais->EscReg){
                 bReg[estado->rt] = estado->ULASaida;  // Reg[rt] ← resultado da ULA
                 printf("[BREG] $%d = %d\n", estado->rt, estado->ULASaida);
             }
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n", estado->ULASaida);
 
             break;
 
         case 7: // Execução tipo R
-            printf("\n[EX] Tipo R\n");
-            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
+            printf("\n[EX] Execução tipo R\n");
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
-            //printf("[ULA] Resultado = %d\n", estado->ULASaida);
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n", estado->ULASaida);
+            printf("[ULA] Resultado = %d\n", estado->ULASaida);
+
             break;
 
         case 8: // Tipo R - Write Back
-            printf("\n[WB] Tipo R\n");
+            printf("\n[WB] Tipo R - escrita no banco\n");
             if(sinais->EscReg){
                 bReg[estado->rd] = estado->ULASaida;  // Reg[rd] ← resultado da ULA
                 printf("[BREG] $%d = %d\n", estado->rd, estado->ULASaida);
             }
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n", estado->ULASaida);
 
             break;
 
         case 9: // BEQ
             int resultado;
             printf("\n[EX] BEQ\n");
-            operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             resultado = ULA(op1, op2, operacaoULA, zero, &overflow);
             if((sinais->branch == 1 && *zero == 1) || sinais->PCEsc == 1){ // Verificar
                 *pc = estado->ULASaida;
@@ -649,13 +606,19 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
                 printf("[PC] Atualizado para %d\n", *pc);
             }
 
-            printf("IR: %s\n", memoria[*pc].mem);
-            printf("MDR: %d\n", estado->MDR);
-            printf("A: %d\n", estado->A);
-            printf("B: %d\n", estado->B);
-            printf("ULASaida: %d\n", estado->ULASaida);
             break;
     }
+
+    printf("\n-----------------------------\n");
+    printf(" Registradores temporários\n");
+    printf("-----------------------------\n");
+    printf("IR       : %s\n", memoria[*pc].mem);
+    printf("MDR      : %d\n", estado->MDR);
+    printf("A        : %d\n", estado->A);
+    printf("B        : %d\n", estado->B);
+    printf("ULASaida : %d\n", estado->ULASaida);
+    printf("-----------------------------\n");
+
 }
 
 //-----------------------------------------------Impressões----------------------------------------------------
@@ -731,63 +694,40 @@ void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado, int 
 }
 
 void imprimeMemorias(MemoriaUnificada *memoria, int *bReg){
-    int opt, x;
-
     regEstado temp;
-    do{
-        printf("\n==========================================\n");
-        printf("Impressão de memórias\n");
-        printf("==========================================\n");
-        printf("1. Memória de instruções\n");
-        printf("2. Memória de dados\n");
-        printf("Opção: ");
-        scanf("%d", &opt);
+    printf("\n==========================================\n");
+    printf("Memória\n");
+    printf("==========================================\n");
 
-        switch(opt){
-            case 1:
-	            x = 30;
+    printf("\n %-3s | %-16s | %-18s || %-3s | %-16s | %-18s || %-3s | %-16s | %-8s || %-3s | %-16s | %-8s\n",
+        "End", "Memória", "Instrução",
+        "End", "Memória", "Instrução",
+        "End", "Memória", "Dado",
+        "End", "Memória", "Dado");
+    printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
 
-                printf("\n%*sMemória de instruções\n\n", x, "");
+    for (int linha = 0; linha < 64; linha++) {
+     int linhaInst1 = linha;
+     int linhaInst2 = linha + 64;
+     int linhaDado1 = 128 + linha;
+     int linhaDado2 = 128 + linha + 64;
 
-                for (int linha = 0; linha < 64; linha++) {
-                    //1ª coluna
-                    temp.IR = memoria[linha].memoria;
-                    decodificaInstrucao(linha, &temp, bReg);
+     temp.IR = memoria[linhaInst1].memoria;
+     decodificaInstrucao(linhaInst1, &temp, bReg);
+     printf(" %3d | %16s | ", linhaInst1, memoria[linhaInst1].mem);
+        imprimeInstrucao(memoria, linha, &temp, bReg);
 
-                    printf(" %3d | %16s | ", linha, memoria[linha].mem);
-                    imprimeInstrucao(memoria, linha, &temp, bReg);
+     temp.IR = memoria[linhaInst2].memoria;
+     decodificaInstrucao(linhaInst2, &temp, bReg);
+     printf(" || %3d | %16s | ", linhaInst2, memoria[linhaInst2].mem);
+     imprimeInstrucao(memoria, linhaInst2, &temp, bReg);
 
-                    //2ª coluna
-                    temp.IR = memoria[linha+64].memoria;
-                    decodificaInstrucao(linha+64, &temp, bReg);
+     printf(" || %3d | %16s | %8d || %3d | %16s | %8d\n",
+         linhaDado1, memoria[linhaDado1].mem, memoria[linhaDado1].dado,
+         linhaDado2, memoria[linhaDado2].mem, memoria[linhaDado2].dado);
+    }
 
-                    printf("\t %3d | %16s | ", linha+64, memoria[linha+64].mem);
-                    imprimeInstrucao(memoria, linha+64, &temp, bReg);
-
-                    printf("\n");
-                }
-                break;
-
-            case 2:
-
-                x = 20;
-
-                printf("\n%*sMemória de dados\n\n", x, "");
-
-                for (int linha = 0; linha < 32; linha++) {
-                    printf("%3d | %3d\t %3d | %3d\t %3d | %3d\t %3d | %3d\n",
-                    128 + linha, memoria[128 + linha].dado,
-                    128 + linha + 32, memoria[128 + linha + 32].dado,
-                    128 + linha + 64, memoria[128 + linha + 64].dado,
-                    128 + linha + 96, memoria[128 + linha + 96].dado);
-                }
-                printf("\n");
-                break;
-
-            default:
-                printf("[ERRO] Opção inválida.\n");
-        }
-    }while(opt<1 || opt>2);
+    printf("\n");
 }
 
 //-----------------------------------------------Salvamentos---------------------------------------------------
