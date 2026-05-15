@@ -662,33 +662,33 @@ void imprimeInstrucao(MemoriaUnificada *memoria, int pc, regEstado *estado, int 
     switch(estado->opcode){
         case 0: // Tipo R
             if(estado->funct==0)
-                printf("add $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
+                printf("add $%d, $%d, $%-4d", estado->rd, estado->rs, estado->rt);
             else if(estado->funct==2)
-                printf("sub $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
+                printf("sub $%d, $%d, $%-4d", estado->rd, estado->rs, estado->rt);
             else if(estado->funct==4)
-                printf("and $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
+                printf("and $%d, $%d, $%-4d", estado->rd, estado->rs, estado->rt);
             else if(estado->funct==5)
-                printf("or $%d, $%d, $%d", estado->rd, estado->rs, estado->rt);
+                printf("or $%d, $%d, $%-5d", estado->rd, estado->rs, estado->rt);
             break;
 
         case 2: // Jump
-            printf("j %d%*s", estado->addr, x, "");
+            printf("j %-15d", estado->addr);
             break;
 
         case 4: // Addi
-            printf("addi $%d, $%d, %d", estado->rt, estado->rs, estado->imm);
+            printf("addi $%d, $%d, %-4d", estado->rt, estado->rs, estado->imm);
             break;
 
         case 8: // BEQ
-            printf("beq $%d, $%d, %d", estado->rs, estado->rt, estado->imm);
+            printf("beq $%d, $%d, %-5d", estado->rs, estado->rt, estado->imm);
             break;
 
         case 11: // LW
-            printf("lw $%d, %d($%d)", estado->rt, estado->imm, estado->rs);
+            printf("lw $%d, %d($%d)%-5s", estado->rt, estado->imm, estado->rs,"");
             break;
 
         case 15: // SW
-            printf("sw $%d, %d($%d)", estado->rt, estado->imm, estado->rs);
+            printf("sw $%d, %d($%d)%-5s", estado->rt, estado->imm, estado->rs,"");
             break;
     }
 }
@@ -699,12 +699,12 @@ void imprimeMemorias(MemoriaUnificada *memoria, int *bReg){
     printf("Memória\n");
     printf("==========================================\n");
 
-    printf("\n %-3s | %-16s | %-18s || %-3s | %-16s | %-18s || %-3s | %-16s | %-8s || %-3s | %-16s | %-8s\n",
+    printf("\n %-3s |   %-16s|   %-18s|| %-3s |   %-16s|   %-18s|| %-3s |   %-16s|  %-8s|| %-3s |   %-16s| %-8s\n",
         "End", "Memória", "Instrução",
         "End", "Memória", "Instrução",
         "End", "Memória", "Dado",
         "End", "Memória", "Dado");
-    printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
+    printf("---------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
     for (int linha = 0; linha < 64; linha++) {
      int linhaInst1 = linha;
