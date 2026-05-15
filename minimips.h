@@ -88,6 +88,11 @@ typedef struct Estado {
     estatInstrucoes estat;
     int estadoAtual;
     uint16_t IR;
+    uint16_t MDR;
+    int8_t A;
+    int8_t B;
+    int8_t ULASaida;
+    // --------------------------------------
     struct Estado *anterior;
     struct Estado *proximo;
 } Estado;

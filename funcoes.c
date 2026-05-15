@@ -109,7 +109,6 @@ void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
     printf("\n==========================================\n");
     printf("Busca\n");
     printf("==========================================\n");
-    printf("IR: %s\n", memoria[*pc].mem);
 }
 
 
@@ -407,7 +406,7 @@ int ULAcontrole(int ControleUla, int funct){
 //-------------------------------------------Controle de fluxo-------------------------------------------------
 
 void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
-    
+
     while (estado->estadoAtual != 0 || (*pc < 256 && memoria[*pc].memoria != 0)) {
         step(memoria, bReg, sinais, pc, estatInst, estado);
     }
@@ -427,10 +426,10 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
         printf("==========================================\n");
         return;
     }
-    
+
     printf("\n[Estado atual] %d\n", estado->estadoAtual);
     printf("[PC] %d\n", *pc);
-    
+
     // Controle e execução do ciclo
     unidadeControleMulti(estado, sinais);
     executaCiclo(memoria, sinais, bReg, estado, &zero, pc);
@@ -470,7 +469,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
             estatInst->tipoR++;
             break;
         }
-        
+
         estatInst->total++;
     }
 
@@ -501,18 +500,28 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
 
     switch(estado->estadoAtual){
         case 0: // Busca
-            printf("\n[IF] Busca\n");
+            printf("\n[IF] Busca\n\n");
             buscaInstrucao(memoria, pc, estado);
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
             if(sinais->PCEsc){
                 *pc = estado->ULASaida;
                 printf("[PC] Atualizado para %d\n", *pc);
+                printf("IR: %s\n", memoria[*pc].mem);
+                printf("MDR: %d\n", estado->MDR);
+                printf("A: %d\n", estado->A);
+                printf("B: %d\n", estado->B);
+                printf("ULASaida: %d\n", estado->ULASaida);
             }
             break;
         case 1: // Decodificação
-            printf("\n[ID] Decodificação\n");
+            printf("\n[ID] Decodificação\n\n");
             decodificaInstrucao(*pc - 1, estado, bReg);
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n\n", estado->ULASaida);
             switch(estado->opcode){
                 case 0: // Tipo R
                     printf("Tipo R | opcode = %d rs = %d rt = %d rd = %d funct = %d\n", estado->opcode, estado->rs, estado->rt, estado->rd, estado->funct);
@@ -523,7 +532,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
                     break;
 
                 default: // Tipo I
-                    printf("Tipo I | opcode = %d rs = %d rt = %d imm = %d branch = %d\n", estado->opcode, estado->rs, estado->rt, estado->imm, estado->ULASaida);
+                    printf("Tipo I | opcode = %d rs = %d rt = %d imm = %d\n", estado->opcode, estado->rs, estado->rt, estado->imm);
                     break;
             }
             break;
@@ -531,18 +540,37 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             printf("\n[EX] Tipo I\n");
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
-            printf("[ULA] Resultado = %d\n", estado->ULASaida);
+
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n", estado->ULASaida);
+
             break;
         case 3: // LW - leitura memória
             printf("\n[MEM] LW\n");
             acessoMemoria(estado, memoria);
-            printf("[MEMD] mem[%d] -> MDR = %d\n", estado->ULASaida + INI_DADOS, estado->MDR);
+            //printf("[MEMD] mem[%d] -> MDR = %d\n", estado->ULASaida + INI_DADOS, estado->MDR);
+
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n", estado->ULASaida);
+
             break;
         case 4: // LW - write back
             printf("\n[WB] LW\n");
             if(sinais->EscReg){
                 bReg[estado->rt] = estado->MDR;   // Reg[rt] ← MDR
-                printf("[BREG] $%d = %d\n", estado->rt, estado->MDR);
+                //printf("[BREG] $%d = %d\n", estado->rt, estado->MDR);
+
+                printf("IR: %s\n", memoria[*pc].mem);
+                printf("MDR: %d\n", estado->MDR);
+                printf("A: %d\n", estado->A);
+                printf("B: %d\n", estado->B);
+                printf("ULASaida: %d\n", estado->ULASaida);
             }
             break;
 
@@ -551,8 +579,14 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             printf("[DEBUG SW] estado->B = %d | bReg[2] = %d\n", estado->B, bReg[2]);
             if(sinais->EscMem){
                 acessoMemoria(estado, memoria);
-                printf("[MEMD] mem[%d] = %d\n", estado->ULASaida + INI_DADOS, estado->B);
+                //printf("[MEMD] mem[%d] = %d\n", estado->ULASaida + INI_DADOS, estado->B);
             }
+
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n", estado->ULASaida);
             break;
 
         case 6: // ADDI - Finalização
@@ -561,13 +595,24 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
                 bReg[estado->rt] = estado->ULASaida;  // Reg[rt] ← resultado da ULA
                 printf("[BREG] $%d = %d\n", estado->rt, estado->ULASaida);
             }
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n", estado->ULASaida);
+
             break;
 
         case 7: // Execução tipo R
             printf("\n[EX] Tipo R\n");
             operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
-            printf("[ULA] Resultado = %d\n", estado->ULASaida);
+            //printf("[ULA] Resultado = %d\n", estado->ULASaida);
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n", estado->ULASaida);
             break;
 
         case 8: // Tipo R - Write Back
@@ -576,6 +621,12 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
                 bReg[estado->rd] = estado->ULASaida;  // Reg[rd] ← resultado da ULA
                 printf("[BREG] $%d = %d\n", estado->rd, estado->ULASaida);
             }
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n", estado->ULASaida);
+
             break;
 
         case 9: // BEQ
@@ -596,6 +647,12 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
                 *pc = novoPc;
                 printf("[PC] Atualizado para %d\n", *pc);
             }
+
+            printf("IR: %s\n", memoria[*pc].mem);
+            printf("MDR: %d\n", estado->MDR);
+            printf("A: %d\n", estado->A);
+            printf("B: %d\n", estado->B);
+            printf("ULASaida: %d\n", estado->ULASaida);
             break;
     }
 }
@@ -831,23 +888,24 @@ void inicializaHistorico(Historico *hist) {
 
 void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg) {
     Estado *novo = malloc(sizeof(Estado));
+    if (novo == NULL) return;
+
     novo->pc = pc;
-
-    for(int i=0;i<8;i++) {
-        novo->bReg[i] = bReg[i];
-    }
-
+    for(int i=0; i<8; i++) novo->bReg[i] = bReg[i];
     novo->estat = *estatInst;
     novo->estadoAtual = reg->estadoAtual;
-    novo->anterior = hist->ultimo;
-    novo->proximo = NULL;
     novo->IR = reg->IR;
 
-    if(hist->ultimo) {
-        hist->ultimo->proximo = novo;
-    } else {
-        hist->primeiro = novo;
-    }
+    // SALVANDO OS REGISTRADORES INTERNOS [cite: 261]
+    novo->MDR = reg->MDR;
+    novo->A = reg->A;
+    novo->B = reg->B;
+    novo->ULASaida = reg->ULASaida;
+
+    novo->anterior = hist->ultimo;
+    novo->proximo = NULL;
+    if(hist->ultimo) hist->ultimo->proximo = novo;
+    else hist->primeiro = novo;
 
     hist->ultimo = novo;
     hist->atual = novo;
@@ -857,22 +915,24 @@ void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatI
     if(hist->atual && hist->atual->anterior) {
         hist->atual = hist->atual->anterior;
         *pc = hist->atual->pc;
-
-        for(int i=0;i<8;i++) {
-            bReg[i] = hist->atual->bReg[i];
-        }
+        for(int i=0; i<8; i++) bReg[i] = hist->atual->bReg[i];
 
         *estatInst = hist->atual->estat;
         reg->estadoAtual = hist->atual->estadoAtual;
         reg->IR = hist->atual->IR;
 
-        if (reg->estadoAtual == 1) {
-            decodificaInstrucao(*pc, reg, bReg);
-        }
+        // RESTAURANDO OS REGISTRADORES INTERNOS
+        reg->MDR = hist->atual->MDR;
+        reg->A = hist->atual->A;
+        reg->B = hist->atual->B;
+        reg->ULASaida = hist->atual->ULASaida;
 
-        printf("\n[BACK] PC=%d | estado=%d\n", *pc, reg->estadoAtual);
+        // Se o estado for decodificação, re-sincroniza os campos auxiliares
+        if (reg->estadoAtual == 1) decodificaInstrucao(*pc, reg, bReg);
+
+        printf("\n[BACK] Retornou para PC=%d | Estado=%d\n", *pc, reg->estadoAtual);
     } else {
-        printf("\n[INFO] Não há instrução anterior.\n");
+        printf("\n[INFO] Não há estados anteriores no histórico.\n");
     }
 }
 
@@ -902,4 +962,9 @@ void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstruco
     estado->A = 0;
     estado->B = 0;
     estado->ULASaida = 0;
+}
+
+void salvaMem(MemoriaUnificada *memoria, int qntdInst) {
+    // Implementação futura para salvar o estado da memória se desejar
+    printf("\n[INFO] Função salvaMem chamada para %d instruções.\n", qntdInst);
 }
