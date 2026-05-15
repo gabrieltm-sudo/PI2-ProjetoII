@@ -142,7 +142,7 @@ void decodificaInstrucao(int pc, regEstado *estado, int *bReg){
             estado->imm = extensorBit(estado->imm);
             break;
     }
-    
+
     if(estado->tipoInst != tipoJ){
         estado->A = bReg[estado->rs];
         estado->B = bReg[estado->rt];
@@ -490,7 +490,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
         novoPc = estado->ULASaida;
     else if(sinais->PCFonte == 2)
         novoPc = estado->addr;
-    
+
     operacaoULA = ULAcontrole(sinais->ControleUla, estado->funct);
 
     printf("\n==========================================================\n");
@@ -510,7 +510,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
         case 1: // Decodificação
             printf("\n[ID] Decodificação\n");
             decodificaInstrucao(*pc - 1, estado, bReg);
-            
+
             switch(estado->opcode){
                 case 0: // Tipo R
                     printf("Tipo R  | opcode: %d | rs: %d | rt: %d | rd: %d | funct: %d\n", estado->opcode, estado->rs, estado->rt, estado->rd, estado->funct);
@@ -530,7 +530,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
 
 
             estado->ULASaida = ULA(*pc, (extensorBit(estado->IR & 0x3F)+1),  operacaoULA, zero, &overflow);
-            
+
             printf("[EX] Endereço de desvio calculado: %d\n", estado->ULASaida);
             break;
         case 2: // Execução tipo I
@@ -837,7 +837,7 @@ void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst,
     novo->estadoAtual = reg->estadoAtual;
     novo->IR = reg->IR;
 
-    // SALVANDO OS REGISTRADORES INTERNOS [cite: 261]
+    // SALVANDO OS REGISTRADORES INTERNOS
     novo->MDR = reg->MDR;
     novo->A = reg->A;
     novo->B = reg->B;
@@ -918,7 +918,7 @@ void salvaMem(MemoriaUnificada *memoria, int qntdInst) {
     printf("\nNome do arquivo .mem: ");
     fgets(nome, sizeof(nome), stdin);
     nome[strcspn(nome, "\n")] = '\0';
-    
+
     int indice = 1;
 
     snprintf(nomeMEM, sizeof(nomeMEM), "%s%s", nome, extensao);
