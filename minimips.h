@@ -18,7 +18,7 @@ enum inst{
     tipoI, tipoJ, tipoR, tipoDado
 };
 
-// struct dos registradores de estado (IR, MDR, A, B e ULASaída)
+// struct dos registradores de estado (IR, MDR, A, B e ULASaída) e campos das instruções
 typedef struct{
     // Registradores internos multiciclo
     uint16_t IR;
@@ -70,15 +70,15 @@ typedef struct {
     char mem[17];
     enum inst tipoInst;
     uint16_t memoria;
-    uint8_t opcode;
-    uint8_t rs;
-    uint8_t rt;
-    uint8_t rd;
-    uint8_t funct;
-    int8_t imm;
-    uint8_t addr;
+    uint8_t opcode; // verificar
+    uint8_t rs; // verificar
+    uint8_t rt; // verificar
+    uint8_t rd; // verificar
+    uint8_t funct; // verificar
+    int8_t imm; // Verificar
+    uint8_t addr;// Verificar
     int8_t dado; // valor do dado (se for memória de dados)
-    int decodificado;
+    int decodificado; // verificar
 } MemoriaUnificada;
 
 //step back

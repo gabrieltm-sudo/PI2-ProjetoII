@@ -15,7 +15,7 @@ int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada) {
 
     if (arquivo == NULL) {
         printf("\n[ERRO] Não foi possível abrir o arquivo .mem.\n");
-        return 1;
+        return 0;
     }
 
     char leitura[64];
@@ -909,6 +909,7 @@ void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstruco
     estado->A = 0;
     estado->B = 0;
     estado->ULASaida = 0;
+
 }
 
 void salvaMem(MemoriaUnificada *memoria, int qntdInst) {

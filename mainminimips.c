@@ -5,7 +5,7 @@
 #include "minimips.h"
 
 int main(){
-    int opcao, pc = 0, qntdInst = 0;
+    int opcao, pc = 0, qntdInst = 0, verificaMem=0;
     estatInstrucoes estatInst = {0};
     regEstado regEstado;
     sinaisUC sinais;
@@ -44,7 +44,11 @@ int main(){
                 fgets(arq, sizeof(arq), stdin);
                 arq[strcspn(arq, "\n")] = '\0';
 
-                qntdInst = lerMemUnificada(arq, memoria);
+                verificaMem = lerMemUnificada(arq, memoria);
+                if(verificaMem!=0){
+                    qntdInst = verificaMem;
+                    verificaMem = 1;
+                }
                 break;
 
             case 2:
@@ -93,22 +97,34 @@ int main(){
 
             case 7:
                 // salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                run(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
+                if(verificaMem==1)
+                    run(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
+                else
+                    printf("\n[Erro] Por favor, carregue um arquivo .mem.\n");
                 break;
 
             case 8: // Executa uma instrução (step)
-                step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
-                salvaEstado(&hist, pc, bReg, &estatInst, &regEstado);
-                break; // Adicione este break
+                if(verificaMem==1){
+                    step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
+                    salvaEstado(&hist, pc, bReg, &estatInst, &regEstado);    
+                }
+                else
+                    printf("\n[Erro] Por favor, carregue um arquivo .mem.\n");
+                break;
 
             case 9: // Volta uma instrução (back)
-                voltaInstrucao(&hist, &pc, bReg, &estatInst, &regEstado, memoria);
-                break; // Adicione este break
+                if(verificaMem==1){
+                    voltaInstrucao(&hist, &pc, bReg, &estatInst, &regEstado, memoria);
+                }
+                else
+                    printf("\n[Erro] Por favor, carregue um arquivo .mem.\n");
+                break;
 
             case 10: // Reset
                 resetSimulador(memoria, &pc, bReg, &estatInst, &regEstado);
                 inicializaHistorico(&hist); // Limpa o histórico no reset
                 salvaEstado(&hist, pc, bReg, &estatInst, &regEstado); // Salva estado inicial
+                printf("\nReset feito com sucesso!\n");
                 break;
 
             case 0:
