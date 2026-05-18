@@ -5,17 +5,17 @@
 #include "minimips.h"
 
 int main(){
-    int opcao, pc = 0, qntdInst = 0, verificaMem=0;
+    int opcao, pc = 0, qntdInst = 0, verificaMem = 0;
     estatInstrucoes estatInst = {0};
     regEstado regEstado;
     sinaisUC sinais;
     MemoriaUnificada memoria[TAM_MEMORIA] = {0};
-    Historico hist;
 
+    Historico *hist = malloc(sizeof(Historico));
+    hist->topo = NULL;
     int *bReg = inicializaBReg();
-    inicializaHistorico(&hist);
 
-    salvaEstado(&hist, pc, bReg, &estatInst, &regEstado);
+    salvaEstado(hist, pc, bReg, estatInst, &regEstado, memoria);
 
     while (1) {
         printf("\nMenu:\n\n");
@@ -46,6 +46,15 @@ int main(){
 
                 verificaMem = lerMemUnificada(arq, memoria);
                 if(verificaMem!=0){
+                    pc = 0;
+                    memset(&regEstado, 0, sizeof(regEstado));
+                    memset(bReg, 0, sizeof(int)*8);
+                    memset(&estatInst, 0, sizeof(estatInst));
+                    regEstado.estadoAtual = 0;
+
+                    limpaHistorico(hist);
+                    salvaEstado(hist, pc, bReg, estatInst, &regEstado, memoria);
+
                     qntdInst = verificaMem;
                     verificaMem = 1;
                 }
@@ -96,40 +105,53 @@ int main(){
                 break;
 
             case 7:
-                // salvaEstado(&hist, pc, bReg, &estatInst, memoria);
-                if(verificaMem==1)
+                if(verificaMem)
                     run(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
                 else
-                    printf("\n[Erro] Por favor, carregue um arquivo .mem.\n");
+                    printf("\nCarregue um .mem primeiro.\n");
                 break;
 
-            case 8: // Executa uma instrução (step)
-                if(verificaMem==1){
-                    step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
-                    salvaEstado(&hist, pc, bReg, &estatInst, &regEstado);    
+            case 8: // Step
+                if (verificaMem) {
+                    if (pc < TAM_MEMORIA && memoria[pc].memoria!= 0) {
+                        salvaEstado(hist, pc, bReg, estatInst, &regEstado, memoria);
+                        step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
+                    } else {
+                        printf("\n==========================================\n");
+                        printf("Fim das instruções\n");
+                        printf("==========================================\n");
+                    }
+                } else {
+                    printf("\nCarregue um.mem primeiro.\n");
                 }
-                else
-                    printf("\n[Erro] Por favor, carregue um arquivo .mem.\n");
                 break;
 
-            case 9: // Volta uma instrução (back)
-                if(verificaMem==1){
-                    voltaInstrucao(&hist, &pc, bReg, &estatInst, &regEstado, memoria);
+            case 9: { // Back
+                if (verificaMem) {
+                    Estado *snap = voltaEstado(hist);
+                    if (snap) {
+                        restauraEstado(&pc, bReg, &estatInst, &regEstado, memoria, snap);
+                        liberaEstado(snap);
+                    }
+                } else {
+                    printf("\nCarregue um .mem primeiro.\n");
                 }
-                else
-                    printf("\n[Erro] Por favor, carregue um arquivo .mem.\n");
                 break;
+            }
 
             case 10: // Reset
                 resetSimulador(memoria, &pc, bReg, &estatInst, &regEstado);
-                inicializaHistorico(&hist); // Limpa o histórico no reset
-                salvaEstado(&hist, pc, bReg, &estatInst, &regEstado); // Salva estado inicial
+                limpaHistorico(hist);
+                pc = 0;
+                salvaEstado(hist, pc, bReg, estatInst, &regEstado, memoria);
                 printf("\nReset feito com sucesso!\n");
                 break;
 
             case 0:
                 // Sair
+                limpaHistorico(hist);
                 free(bReg);
+
                 printf("\nSaindo do programa...\n");
                 return 0;
 

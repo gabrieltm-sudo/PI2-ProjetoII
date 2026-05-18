@@ -70,13 +70,6 @@ typedef struct {
     char mem[17];
     enum inst tipoInst;
     uint16_t memoria;
-    uint8_t opcode; // verificar
-    uint8_t rs; // verificar
-    uint8_t rt; // verificar
-    uint8_t rd; // verificar
-    uint8_t funct; // verificar
-    int8_t imm; // Verificar
-    uint8_t addr;// Verificar
     int8_t dado; // valor do dado (se for memória de dados)
     int decodificado; // verificar
 } MemoriaUnificada;
@@ -87,20 +80,14 @@ typedef struct Estado {
     int bReg[8];
     estatInstrucoes estat;
     int estadoAtual;
-    uint16_t IR;
-    uint16_t MDR;
-    int8_t A;
-    int8_t B;
-    int8_t ULASaida;
+    regEstado *estado;
+    MemoriaUnificada *memoria;
     // --------------------------------------
     struct Estado *anterior;
-    struct Estado *proximo;
 } Estado;
 
 typedef struct {
-    Estado *primeiro;   // início da lista
-    Estado *ultimo;     // fim da lista
-    Estado *atual;      // posição atual
+    Estado *topo;     // posição atual
 } Historico;
 
 /*Instruções:
@@ -160,9 +147,11 @@ int8_t extensorBit(int8_t imm);
 int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
 
 // HISTÓRICO
-void inicializaHistorico(Historico *hist);
-void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg);
-void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg, MemoriaUnificada *memoria);
+void salvaEstado(Historico *h, int pc, int *bReg, estatInstrucoes estat, regEstado *reg, MemoriaUnificada *memoria);
+Estado* voltaEstado(Historico *h);
+void restauraEstado(int *pc, int *bReg, estatInstrucoes *estat, regEstado *reg, MemoriaUnificada *memoria, Estado *snap);
+void liberaEstado(Estado *e);
+void limpaHistorico(Historico *h);
 // -------------------------------------------------------------------------
 
 //RESET DO SIMULADOR

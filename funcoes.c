@@ -406,7 +406,7 @@ int ULAcontrole(int ControleUla, int funct){
 
 void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
 
-    while (estado->estadoAtual != 0 || (*pc < 256 && memoria[*pc].memoria != 0)) {
+    while (*pc < TAM_MEMORIA && memoria[*pc].memoria != 0) {
         step(memoria, bReg, sinais, pc, estatInst, estado);
     }
 
@@ -417,9 +417,9 @@ void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatI
 
 void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     estatInstrucoes *estatInst, regEstado *estado) {
-    int zero = 0;
+     int zero = 0;
 
-    if (estado->estadoAtual == 0 && (*pc >= 256 || memoria[*pc].memoria == 0)) {
+    if (*pc >= TAM_MEMORIA || memoria[*pc].memoria == 0) {
         printf("\n==========================================\n");
         printf("Fim das instruções\n");
         printf("==========================================\n");
@@ -731,6 +731,55 @@ void imprimeMemorias(MemoriaUnificada *memoria, int *bReg){
 }
 
 //-----------------------------------------------Salvamentos---------------------------------------------------
+void salvaMem(MemoriaUnificada *memoria, int qntdInst) {
+    int pc = 0;
+    char nomeMEM[50] = {0}, nome[40] = {0}, extensao[] = ".mem", resposta;
+
+    printf("\nNome do arquivo .mem: ");
+    fgets(nome, sizeof(nome), stdin);
+    nome[strcspn(nome, "\n")] = '\0';
+
+    int indice = 1;
+
+    snprintf(nomeMEM, sizeof(nomeMEM), "%s%s", nome, extensao);
+
+    while (access(nomeMEM, F_OK) != -1) {
+        printf("\nArquivo '%s' já existe. Sobrescrever? (s/n): ", nomeMEM);
+        scanf(" %c", &resposta);
+
+        if (resposta == 's' || resposta == 'S') {
+            break;
+        } else if (resposta == 'n' || resposta == 'N') {
+            snprintf(nomeMEM, sizeof(nomeMEM), "%s_%d%s", nome, indice, extensao);
+            indice++;
+        } else {
+            printf("\n[ERRO] Opção inválida. Tente novamente.\n");
+        }
+    }
+
+    arquivo = fopen(nomeMEM, "w");
+
+    if (arquivo == NULL) {
+        printf("\n[ERRO] Não foi possível criar o arquivo.\n");
+        return;
+    }
+
+    for (int i = 0; i < qntdInst && i < 128; i++) {
+        fprintf(arquivo, "%s\n", memoria[i].mem);
+    }
+
+    fprintf(arquivo, ".data\n");
+
+    for (int addr = 128; addr < 256; addr++) {
+        if (memoria[addr].dado != 0 || strcmp(memoria[addr].mem, "0000000000000000") != 0) {
+            fprintf(arquivo, "%d:%s\n", addr, memoria[addr].mem);
+        }
+    }
+
+    fclose(arquivo);
+
+    printf("\nArquivo salvo: %s\n", nomeMEM);
+}
 
 void salvaASM(MemoriaUnificada *memoria, int qntdInst, regEstado *estado,int *bReg) {
     int pc = 0;
@@ -821,67 +870,86 @@ void salvaASM(MemoriaUnificada *memoria, int qntdInst, regEstado *estado,int *bR
 
 //------------------------------------------------Histórico----------------------------------------------------
 
-void inicializaHistorico(Historico *hist) {
-    hist->primeiro = NULL;
-    hist->ultimo = NULL;
-    hist->atual = NULL;
+Historico* criaHistorico() {
+    Historico *h = (Historico *)malloc(sizeof(Historico));
+    h->topo=NULL;
+    return h;
 }
 
-void salvaEstado(Historico *hist, int pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg) {
+void salvaEstado(Historico *h, int pc, int *bReg, estatInstrucoes estat, regEstado *reg, MemoriaUnificada *memoria) {
     Estado *novo = malloc(sizeof(Estado));
-    if (novo == NULL) return;
+    if (!novo) return;
 
     novo->pc = pc;
-    for(int i=0; i<8; i++) novo->bReg[i] = bReg[i];
-    novo->estat = *estatInst;
+    memcpy(novo->bReg, bReg, sizeof(int)*8);
+    novo->estat = estat;
     novo->estadoAtual = reg->estadoAtual;
-    novo->IR = reg->IR;
 
-    // SALVANDO OS REGISTRADORES INTERNOS
-    novo->MDR = reg->MDR;
-    novo->A = reg->A;
-    novo->B = reg->B;
-    novo->ULASaida = reg->ULASaida;
+    novo->estado = malloc(sizeof(regEstado));
+    if (!novo->estado) { free(novo); return; }
+    *novo->estado = *reg;
 
-    novo->anterior = hist->ultimo;
-    novo->proximo = NULL;
-    if(hist->ultimo) hist->ultimo->proximo = novo;
-    else hist->primeiro = novo;
+    novo->memoria = malloc(sizeof(MemoriaUnificada) * TAM_MEMORIA);
+    if (!novo->memoria) {
+        free(novo->estado);
+        free(novo);
+        return;
+    }
+    memcpy(novo->memoria, memoria, sizeof(MemoriaUnificada) * TAM_MEMORIA);
 
-    hist->ultimo = novo;
-    hist->atual = novo;
+    novo->anterior = h->topo;
+    h->topo = novo;
 }
 
-void voltaInstrucao(Historico *hist, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *reg, MemoriaUnificada *memoria) {
-    if(hist->atual && hist->atual->anterior) {
-        hist->atual = hist->atual->anterior;
-        *pc = hist->atual->pc;
-        for(int i=0; i<8; i++) bReg[i] = hist->atual->bReg[i];
-
-        *estatInst = hist->atual->estat;
-        reg->estadoAtual = hist->atual->estadoAtual;
-        reg->IR = hist->atual->IR;
-
-        // RESTAURANDO OS REGISTRADORES INTERNOS
-        reg->MDR = hist->atual->MDR;
-        reg->A = hist->atual->A;
-        reg->B = hist->atual->B;
-        reg->ULASaida = hist->atual->ULASaida;
-
-        // Se o estado for decodificação, re-sincroniza os campos auxiliares
-        if (reg->estadoAtual == 1) decodificaInstrucao(*pc, reg, bReg);
-
-        printf("\n[BACK] Retornou para PC=%d | Estado=%d\n", *pc, reg->estadoAtual);
-    } else {
-        printf("\n[INFO] Não há estados anteriores no histórico.\n");
+Estado* voltaEstado(Historico *h) {
+    if (h->topo == NULL || h->topo->anterior == NULL) {
+        printf("\nNão há mais estados para voltar.\n");
+        return NULL;
     }
 
-    printf("IR: %s\n", memoria[*pc].mem);
-    printf("MDR: %d\n", reg->MDR);
-    printf("A: %d\n", reg->A);
-    printf("B: %d\n", reg->B);
-    printf("ULASaida: %d\n", reg->ULASaida);
+    Estado *removido = h->topo;
+    h->topo = removido->anterior;
+    removido->anterior = NULL;
+
+    printf("\n-----------------------------\n");
+    printf(" Registradores temporários\n");
+    printf("-----------------------------\n");
+    printf("IR       : %s\n", removido->memoria[removido->pc].mem);
+    printf("MDR      : %d\n", removido->estado->MDR);
+    printf("A        : %d\n", removido->estado->A);
+    printf("B        : %d\n", removido->estado->B);
+    printf("ULASaida : %d\n", removido->estado->ULASaida);
+    printf("-----------------------------\n");
+
+    return removido;
 }
+
+void liberaEstado(Estado *e) {
+    if (e) {
+        free(e->estado);
+        free(e->memoria);
+        free(e);
+    }
+}
+
+void restauraEstado(int *pc, int *bReg, estatInstrucoes *estat,
+                    regEstado *reg, MemoriaUnificada *memoria, Estado *snap) {
+    *pc = snap->pc;
+    memcpy(bReg, snap->bReg, sizeof(int)*8);
+    *estat = snap->estat;
+    *reg = *snap->estado;
+    memcpy(memoria, snap->memoria, sizeof(MemoriaUnificada) * TAM_MEMORIA);
+}
+
+void limpaHistorico(Historico *h) {
+    while (h->topo) {
+        Estado *tmp = h->topo;
+        h->topo = tmp->anterior;
+        liberaEstado(tmp);
+    }
+}
+
+//------------------------------------------------Reset----------------------------------------------------
 
 void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstrucoes *estatInst, regEstado *estado) {
     // Zera PC
@@ -910,54 +978,4 @@ void resetSimulador(MemoriaUnificada *memoria, int *pc, int *bReg, estatInstruco
     estado->B = 0;
     estado->ULASaida = 0;
 
-}
-
-void salvaMem(MemoriaUnificada *memoria, int qntdInst) {
-    int pc = 0;
-    char nomeMEM[50] = {0}, nome[40] = {0}, extensao[] = ".mem", resposta;
-
-    printf("\nNome do arquivo .mem: ");
-    fgets(nome, sizeof(nome), stdin);
-    nome[strcspn(nome, "\n")] = '\0';
-
-    int indice = 1;
-
-    snprintf(nomeMEM, sizeof(nomeMEM), "%s%s", nome, extensao);
-
-    while (access(nomeMEM, F_OK) != -1) {
-        printf("\nArquivo '%s' já existe. Sobrescrever? (s/n): ", nomeMEM);
-        scanf(" %c", &resposta);
-
-        if (resposta == 's' || resposta == 'S') {
-            break;
-        } else if (resposta == 'n' || resposta == 'N') {
-            snprintf(nomeMEM, sizeof(nomeMEM), "%s_%d%s", nome, indice, extensao);
-            indice++;
-        } else {
-            printf("\n[ERRO] Opção inválida. Tente novamente.\n");
-        }
-    }
-
-    arquivo = fopen(nomeMEM, "w");
-
-    if (arquivo == NULL) {
-        printf("\n[ERRO] Não foi possível criar o arquivo.\n");
-        return;
-    }
-
-    for (int i = 0; i < qntdInst && i < 128; i++) {
-        fprintf(arquivo, "%s\n", memoria[i].mem);
-    }
-
-    fprintf(arquivo, ".data\n");
-
-    for (int addr = 128; addr < 256; addr++) {
-        if (memoria[addr].dado != 0 || strcmp(memoria[addr].mem, "0000000000000000") != 0) {
-            fprintf(arquivo, "%d:%s\n", addr, memoria[addr].mem);
-        }
-    }
-
-    fclose(arquivo);
-
-    printf("\nArquivo salvo: %s\n", nomeMEM);
 }
