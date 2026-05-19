@@ -316,7 +316,7 @@ void defineEstado(int *estadoAtual, uint8_t opcode){
 
 //----------------------------------------Execução (EX, MEM, WB)-----------------------------------------------
 
-int8_t ULA(int op1, int op2, int ControleUla, int *zero, int *overflow){
+int8_t ULA(int op1, int op2, int ControleUla, int *zero, int *overflow, regEstado *estado){
     int resultado = 0;
     *overflow = 0;
     int8_t res_8bit;
@@ -353,12 +353,13 @@ int8_t ULA(int op1, int op2, int ControleUla, int *zero, int *overflow){
         default:
             printf("\nOperação da ULA inválida!\n");
     }
-    //FECHA SE FOR OVERFLOW
-    if(*overflow == 1){
-    printf("\n OVERFLOW!\n");
-    exit(1);
-}
-
+    if(*overflow){
+        printf("\nOVERFLOW!\n");
+            if(estado->opcode != 11 && estado->opcode != 15){
+                exit(1);
+            }
+        }
+    
     // flag zero
     if(resultado == 0){
         *zero = 1;
@@ -501,7 +502,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
         case 0: // Busca
             printf("\n[IF] Busca de instrução\n");
             buscaInstrucao(memoria, pc, estado);
-            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow, estado);
             if(sinais->PCEsc){
                 *pc = estado->ULASaida;
                 printf("[PC] Atualizado para %d\n", *pc);
@@ -529,13 +530,13 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             printf("\n");
 
 
-            estado->ULASaida = ULA(*pc, (extensorBit(estado->IR & 0x3F)+1),  operacaoULA, zero, &overflow);
+            estado->ULASaida = ULA(*pc, (extensorBit(estado->IR & 0x3F)+1),  operacaoULA, zero, &overflow, estado);
 
             printf("[EX] Endereço de desvio calculado: %d\n", estado->ULASaida);
             break;
         case 2: // Execução tipo I
             printf("\n[EX] Execução tipo I\n");
-            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow, estado);
 
             break;
         case 3: // LW - leitura memória
@@ -574,7 +575,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
 
         case 7: // Execução tipo R
             printf("\n[EX] Execução tipo R\n");
-            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow);
+            estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow, estado);
             printf("[ULA] Resultado = %d\n", estado->ULASaida);
 
             break;
@@ -591,7 +592,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
         case 9: // BEQ
             int resultado;
             printf("\n[EX] BEQ\n");
-            resultado = ULA(op1, op2, operacaoULA, zero, &overflow);
+            resultado = ULA(op1, op2, operacaoULA, zero, &overflow, estado);
             if((sinais->branch == 1 && *zero == 1) || sinais->PCEsc == 1){ // Verificar
                 *pc = estado->ULASaida;
                 printf("[BRANCH] tomado -> PC = %d\n", *pc);

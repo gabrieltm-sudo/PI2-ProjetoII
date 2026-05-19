@@ -144,7 +144,7 @@ void executaCiclo(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regE
 int8_t extensorBit(int8_t imm);
 
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
-int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow);
+int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow, regEstado *estado);
 
 // HISTÓRICO
 void salvaEstado(Historico *h, int pc, int *bReg, estatInstrucoes estat, regEstado *reg, MemoriaUnificada *memoria);
