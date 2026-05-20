@@ -613,7 +613,7 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
     printf("\n-----------------------------\n");
     printf(" Registradores temporários\n");
     printf("-----------------------------\n");
-    printf("IR       : %s\n", memoria[*pc].mem);
+    printf("IR       : %s\n", memoria[*pc-1].mem);
     printf("MDR      : %d\n", estado->MDR);
     printf("A        : %d\n", estado->A);
     printf("B        : %d\n", estado->B);
