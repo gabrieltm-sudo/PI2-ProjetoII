@@ -5,14 +5,14 @@ help:
 	@echo "Digite make compilerun para compilar e executar o arquivo de uma vez."
 	@echo "Digite make rm para excluir o arquivo gerado."
 compile:
-	gcc -c funcoes.c -o funcoes
+	gcc -c -g funcoes.c -o funcoes
 	gcc -Wall -Wextra -g mainminimips.c funcoes -o exec
 
 run:
 	./exec
 
 compilerun:
-	gcc -c funcoes.c -o funcoes
+	gcc -c -g funcoes.c -o funcoes
 	gcc -Wall -Wextra -g mainminimips.c funcoes -o exec
 	./exec
 
