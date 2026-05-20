@@ -407,7 +407,7 @@ int ULAcontrole(int ControleUla, int funct){
 
 void run(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc, estatInstrucoes *estatInst, regEstado *estado) {
 
-    while (*pc < TAM_MEMORIA && memoria[*pc].memoria != 0) {
+    while (estado->estadoAtual != 0 || (*pc < 256 && memoria[*pc].memoria != 0)) {
         step(memoria, bReg, sinais, pc, estatInst, estado);
     }
 
@@ -420,7 +420,7 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     estatInstrucoes *estatInst, regEstado *estado) {
      int zero = 0;
 
-    if (*pc >= TAM_MEMORIA || memoria[*pc].memoria == 0) {
+    if (estado->estadoAtual == 0 && (*pc >= 256 || memoria[*pc].memoria == 0)) {
         printf("\n==========================================\n");
         printf("Fim das instruções\n");
         printf("==========================================\n");

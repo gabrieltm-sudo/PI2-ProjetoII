@@ -122,7 +122,7 @@ int main(){
                         printf("==========================================\n");
                     }
                 } else {
-                    printf("\nCarregue um.mem primeiro.\n");
+                    printf("\nCarregue um .mem primeiro.\n");
                 }
                 break;
 
