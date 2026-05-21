@@ -533,9 +533,9 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
             break;
         case 2: // Execução tipo I
             printf("\n[EX] Execução tipo I\n");
-            printf("[ULA] Resultado = %d\n", estado->ULASaida);
-
+         
             estado->ULASaida = ULA(op1, op2, operacaoULA, zero, &overflow, estado);
+            printf("[ULA] Resultado = %d\n", estado->ULASaida);
 
             break;
         case 3: // LW - leitura memória
