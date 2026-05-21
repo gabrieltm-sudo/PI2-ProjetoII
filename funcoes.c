@@ -316,7 +316,7 @@ void defineEstado(int *estadoAtual, uint8_t opcode){
 
 //----------------------------------------Execução (EX, MEM, WB)-----------------------------------------------
 
-int8_t ULA(int op1, int op2, int ControleUla, int *zero, int *overflow, regEstado *estado){
+int ULA(int op1, int op2, int ControleUla, int *zero, int *overflow, regEstado *estado){
     int resultado = 0;
     *overflow = 0;
     int8_t res_8bit;

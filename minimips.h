@@ -25,7 +25,7 @@ typedef struct{
     uint16_t MDR;
     int8_t A;
     int8_t B;
-    int8_t ULASaida;
+    int ULASaida;
     int estadoAtual;
 
     // Campos decodificados
@@ -144,7 +144,7 @@ void executaCiclo(MemoriaUnificada *instrucao, sinaisUC *sinais, int *bReg, regE
 int8_t extensorBit(int8_t imm);
 
 // ULA (UNIDADE LÓGICA E ARITMÉTICA)
-int8_t ULA(int op1, int op2, int ulaOp, int *zero, int *overflow, regEstado *estado);
+int ULA(int op1, int op2, int ulaOp, int *zero, int *overflow, regEstado *estado);
 
 // HISTÓRICO
 void salvaEstado(Historico *h, int pc, int *bReg, estatInstrucoes estat, regEstado *reg, MemoriaUnificada *memoria);
