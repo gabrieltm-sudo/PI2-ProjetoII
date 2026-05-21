@@ -26,8 +26,8 @@ int main(){
         printf("5. Salvar .asm\n");
         printf("6. Salvar .mem\n");
         printf("7. Executa programa (run)\n");
-        printf("8. Executa uma instrução (step)\n");
-        printf("9. Volta uma instrução (back)\n");
+        printf("8. Executa um ciclo (step)\n");
+        printf("9. Volta um ciclo (back)\n");
         printf("10. Reset\n");
         printf("0. Sair\n\n");
         printf("Digite uma opção: ");

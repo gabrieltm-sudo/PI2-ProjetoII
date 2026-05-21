@@ -71,7 +71,6 @@ typedef struct {
     enum inst tipoInst;
     uint16_t memoria;
     int8_t dado; // valor do dado (se for memória de dados)
-    int decodificado; // verificar
 } MemoriaUnificada;
 
 //step back

@@ -30,7 +30,6 @@ int lerMemUnificada(char *arq, MemoriaUnificada *memUnificada) {
         strcpy(memUnificada[j].mem, "0000000000000000");
         memUnificada[j].memoria = 0;
         memUnificada[j].dado = 0;
-        memUnificada[j].decodificado = 0;
     }
 
     while (fgets(leitura, sizeof(leitura), arquivo)) {
@@ -433,8 +432,6 @@ void step(MemoriaUnificada *memoria, int *bReg, sinaisUC *sinais, int *pc,
     // Controle e execução do ciclo
     unidadeControleMulti(estado, sinais);
     executaCiclo(memoria, sinais, bReg, estado, &zero, pc);
-
-    memoria[*pc - 1].decodificado = 1; // Verificar se necessário no cenário atual
 
     // Estatísticas
     if(estado->estadoAtual == 1){
