@@ -90,11 +90,27 @@ void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor)
 }
 
 
+
 void acessoMemoria(regEstado *estado, MemoriaUnificada *memoria) {
+
     if (estado->opcode == 11) { // LW
+
         estado->MDR = memoria[estado->ULASaida].dado;
-    } else if (estado->opcode == 15) { // SW
-        memoria[estado->ULASaida].dado = estado->B;
+
+    }else if (estado->opcode == 15) { // SW
+
+        int endereco = estado->ULASaida;
+
+        memoria[endereco].dado = (int8_t)estado->B;
+
+        // deixa os 8 primeiros bits em 0
+        memoria[endereco].memoria = (uint16_t)((uint8_t)estado->B);
+
+        for(int i = 15; i >= 0; i--){
+            memoria[endereco].mem[15 - i] = ((memoria[endereco].memoria >> i) & 1) + '0';
+        }
+
+    memoria[endereco].mem[16] = '\0';
     }
 }
 
