@@ -113,14 +113,9 @@ int main(){
 
             case 8: // Step
                 if (verificaMem) {
-                    if (pc < TAM_MEMORIA && memoria[pc].memoria!= 0) {
                         salvaEstado(hist, pc, bReg, estatInst, &regEstado, memoria);
                         step(memoria, bReg, &sinais, &pc, &estatInst, &regEstado);
-                    } else {
-                        printf("\n==========================================\n");
-                        printf("Fim das instruções\n");
-                        printf("==========================================\n");
-                    }
+
                 } else {
                     printf("\nCarregue um .mem primeiro.\n");
                 }

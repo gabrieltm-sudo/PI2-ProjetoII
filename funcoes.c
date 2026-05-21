@@ -913,7 +913,9 @@ Estado* voltaEstado(Historico *h) {
     Estado *removido = h->topo;
     h->topo = removido->anterior;
     removido->anterior = NULL;
-
+    
+    printf("\nPC: %d\n", removido->pc);
+    printf("Estado atual: %d\n\n", removido->estadoAtual);
     printf("\n-----------------------------\n");
     printf(" Registradores temporários\n");
     printf("-----------------------------\n");
