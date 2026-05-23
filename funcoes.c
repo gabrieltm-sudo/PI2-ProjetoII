@@ -92,31 +92,36 @@ void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor)
 
 
 void acessoMemoria(regEstado *estado, MemoriaUnificada *memoria) {
+    
+    if(estado->ULASaida>=128 || estado->ULASaida<=255){
 
-    if (estado->opcode == 11) { // LW
-
-        estado->MDR = memoria[estado->ULASaida].dado;
-
-    }else if (estado->opcode == 15) { // SW
-
-        int endereco = estado->ULASaida;
-
-        memoria[endereco].dado = (int8_t)estado->B;
-
-        // deixa os 8 primeiros bits em 0
-        memoria[endereco].memoria = (uint16_t)((uint8_t)estado->B);
-
-        for(int i = 15; i >= 0; i--){
-            memoria[endereco].mem[15 - i] = ((memoria[endereco].memoria >> i) & 1) + '0';
+        if (estado->opcode == 11) { // LW
+            
+            estado->MDR = memoria[estado->ULASaida].dado;
+            
+        }else if (estado->opcode == 15) { // SW
+            
+            int endereco = estado->ULASaida;
+            
+            memoria[endereco].dado = (int8_t)estado->B;
+            
+            // deixa os 8 primeiros bits em 0
+            memoria[endereco].memoria = (uint16_t)((uint8_t)estado->B);
+            
+            for(int i = 15; i >= 0; i--){
+                memoria[endereco].mem[15 - i] = ((memoria[endereco].memoria >> i) & 1) + '0';
+            }
+            
+            memoria[endereco].mem[16] = '\0';
         }
-
-    memoria[endereco].mem[16] = '\0';
+    }else{
+        printf("\n[Erro] Erro ao acessar a memória. Endereço inválido\n");
     }
 }
-
-
-//----------------------------------------------BUSCA (IF)-----------------------------------------------------
-
+    
+    
+    //----------------------------------------------BUSCA (IF)-----------------------------------------------------
+    
 void buscaInstrucao(MemoriaUnificada *memoria, int *pc, regEstado *estado) {
     // Carrega instrução no IR
     estado->IR = memoria[*pc].memoria;
@@ -179,7 +184,6 @@ void unidadeControleMulti(regEstado *estado, sinaisUC *sinais) {
     // Zera sinais
     *sinais = (sinaisUC){0};
 
-// Devo ver se realmente preciso dar igual zero nos sinais zerados pois eles são zerados acima - Gabriel
     switch(estado->estadoAtual) {
         case 0: //  Estado 0 - Busca
             sinais->LerMem = 1;
@@ -194,7 +198,7 @@ void unidadeControleMulti(regEstado *estado, sinaisUC *sinais) {
             sinais->PCFonte = 0; // PC vem da saída da ULA
 
             sinais->IouD = 0; // Memória acessa valor apontado pelo PC
-            sinais->RegDst = 1; // ? Acredito ser don't care pois o regEsc é zero nesse momento
+            sinais->RegDst = 1; // don't care
 
             break;
         case 1: // Estado 1 - Decodificação
@@ -628,7 +632,11 @@ void executaCiclo(MemoriaUnificada *memoria, sinaisUC *sinais, int *bReg,regEsta
     printf("\n-----------------------------\n");
     printf(" Registradores temporários\n");
     printf("-----------------------------\n");
-    printf("IR       : %s\n", memoria[*pc-1].mem);
+    printf("IR       : ");
+    for(int i = 15; i >= 0; i--) {
+        printf("%d", (estado->IR >> i) & 1);
+    }
+    printf("\n");
     printf("MDR      : %d\n", estado->MDR);
     printf("A        : %d\n", estado->A);
     printf("B        : %d\n", estado->B);
@@ -932,7 +940,11 @@ Estado* voltaEstado(Historico *h) {
     printf("\n-----------------------------\n");
     printf(" Registradores temporários\n");
     printf("-----------------------------\n");
-    printf("IR       : %s\n", removido->memoria[removido->pc].mem);
+    printf("IR       : ");
+    for(int i = 15; i >= 0; i--) {
+        printf("%d", (removido->estado->IR >> i) & 1);
+    }
+    printf("\n");
     printf("MDR      : %d\n", removido->estado->MDR);
     printf("A        : %d\n", removido->estado->A);
     printf("B        : %d\n", removido->estado->B);
