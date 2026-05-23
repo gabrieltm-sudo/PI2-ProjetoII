@@ -93,7 +93,7 @@ void escreveMemDados(MemoriaUnificada *memUnificada, int endereco, int8_t valor)
 
 void acessoMemoria(regEstado *estado, MemoriaUnificada *memoria) {
     
-    if(estado->ULASaida>=128 || estado->ULASaida<=255){
+    if(estado->ULASaida>=128 && estado->ULASaida<=255){
 
         if (estado->opcode == 11) { // LW
             
